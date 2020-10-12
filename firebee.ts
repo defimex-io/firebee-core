@@ -1,6 +1,6 @@
 import { Address, DB, Store } from "keystore_wdc/lib";
 import { User, MAX_LEVEL , ZERO_ADDRESS, X3, X6} from "./types";
-import {Context, Globals, U256} from "keystore_wdc/lib/index";
+import {___idof, ABI_DATA_TYPE, Context, Globals, U256} from "keystore_wdc/lib/index";
 
 class UserDB{
     static USER_DB = Store.from<Address, ArrayBuffer>('user')
@@ -26,9 +26,9 @@ const userIds = Store.from<u64, Address>('userIds');
 const levelPrice = Store.from<u64, u64>('levelPrice');
 const firstPrice = 10;
 
-export function init(ownerAddress: Address, lastUserId: u256): Address {
+export function init(ownerAddress: Address, lastUserId: U256): Address {
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
-    Globals.set<u256>('lastUserId', lastUserId);
+    Globals.set<U256>('lastUserId', lastUserId);
     // ownerAddress
     //第一个等级是价格设定
     levelPrice.set(1, firstPrice);
@@ -53,7 +53,7 @@ export function init(ownerAddress: Address, lastUserId: u256): Address {
     }
 
     //将创始人加入到用户记录数组中
-    UserDB.setUser(ownerAddress, user.getEncoded());
+    UserDB.setUser(ownerAddress, user);
 
     //将创始人记录到ID记录数组中
     idToAddress.set(1, ownerAddress);
@@ -112,6 +112,7 @@ export function buyNewLevel(matrix : u64, level : u64) {
         let freeX3Referrer = findFreeX3Referrer(msg.sender, level);
         sendUser.x3Matrix[level].currentReferrer = freeX3Referrer;
         sendUser.activeX3Levels[level] = true;
+        UserDB.setUser(msg.sender, sendUser);
         updateX3Referrer(msg.sender, freeX3Referrer, level);
 
         Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, 1, level));
@@ -135,7 +136,7 @@ export function buyNewLevel(matrix : u64, level : u64) {
 //新用户注册方法
 //参数为：新用户地址、推荐人地址
 //注意，所谓的新用户注册，就是给某个已经加入到矩阵的地址（推荐人地址）投资，同时要符合级别的要求，新用户只能从第一级开始
-function registration(userAddress : Address,referrerAddress : Address, amount: u256) {
+function registration(userAddress : Address,referrerAddress : Address, amount: U256) {
 
     /*这里是一些前置条件的校验，条件分别为：
       1、转账的ETH必须是0.5个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是0.025，加起来就得是0.5,
@@ -157,7 +158,7 @@ function registration(userAddress : Address,referrerAddress : Address, amount: u
     // }
     // require(size == 0, "cannot be a contract");
 
-    let lastUserId = Globals.get<u256>('lastUserId');
+    let lastUserId = Globals.get<U256>('lastUserId');
     //构造User对象
     let user = new User(lastUserId, referrerAddress,0)
 
@@ -167,15 +168,12 @@ function registration(userAddress : Address,referrerAddress : Address, amount: u
 
     //新用户的推荐人地址
     user.referrer = referrerAddress;
-
-    //保存新用户数据
-    UserDB.setUser(userAddress, user);
     //用户ID->用户地址
     idToAddress.set(lastUserId, userAddress);
 
     //新用户记录到ID总册中，同时最新的id+1
     userIds.set(lastUserId, userAddress);
-    Globals.set<u256>('lastUserId', lastUserId++);
+    Globals.set<U256>('lastUserId', lastUserId++);
 
     let referrerUser = UserDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
@@ -193,6 +191,9 @@ function registration(userAddress : Address,referrerAddress : Address, amount: u
     let userx3Matrix = new X3();
     userx3Matrix.currentReferrer = freeX3Referrer;
     user.x3Matrix[1] = userx3Matrix;
+
+    //保存新用户数据
+    UserDB.setUser(userAddress, user);
 
     //将确认到的X3推荐人地址，填入新用户X3第一个矩阵的推荐人地址中
     //注意参数中的freeX3Referrer，这个地址如上所述，是矩阵实际推荐人
@@ -295,6 +296,7 @@ function updateX3Referrer(userAddress: Address,referrerAddress: Address, level: 
         //发送复投事件
         Context.emit<Reinvest>(new Reinvest(owner, ZERO_ADDRESS, userAddress, 1, level));
     }
+    UserDB.setUser(referrerAddress, referrerAddressUser);
 }
 
 //发送ETH
@@ -366,8 +368,13 @@ function findWdcReceiver(userAddress: Address , _from: Address , matrix: u64 , l
     }
 }
 
+// 所有合约的主文件必须声明此函数
+export function __idof(type: ABI_DATA_TYPE): u32 {
+    return ___idof(type);
+}
+
 @unmanaged class NewUserPlace {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: u64, readonly place: u256) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: u64, readonly place: U256) { }
 }
 
 @unmanaged class MissedWdcReceive {
@@ -383,9 +390,9 @@ function findWdcReceiver(userAddress: Address , _from: Address , matrix: u64 , l
 }
 
 @unmanaged class Registration {
-    constructor(readonly user: Address, readonly referrer: Address, readonly userId: u256, readonly referrerId: u256) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly userId: U256, readonly referrerId: U256) { }
 }
 
 @unmanaged class Upgrade {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u256, readonly level: u256) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: U256, readonly level: U256) { }
 }
