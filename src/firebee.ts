@@ -1,6 +1,15 @@
 import { Address, DB, Store } from "../node_modules/keystore_wdc/lib";
-import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6 } from "./types";
+import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6} from "./types";
 import { ___idof, ABI_DATA_TYPE, Context, Globals, U256 } from "../node_modules/keystore_wdc/lib/index";
+
+class FndWdcReceiverResult {
+    receiver : Address;
+    isExtraDividends : boolean;
+    constructor() {
+        this.receiver = ZERO_ADDRESS;
+        this.isExtraDividends = false;
+    }
+}
 
 class UserDB {
     static USER_DB: Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
@@ -34,11 +43,13 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
     Globals.set<U256>('lastUserId', lastUserId);
     // ownerAddress
     //第一个等级是价格设定
-    levelPrice.set(1, U256.fromU64(firstPrice));
+    levelPrice.set(1, firstPrice);
 
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
+        // @ts-ignore
         let nextLeverPrice = levelPrice.get(i) * U256.fromU64(2);
+        // @ts-ignore
         levelPrice.set(i, nextLeverPrice);
     }
 
@@ -48,7 +59,7 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
 
     //将创始人，也就是合约部署者的地址定义为ID为1的用户
     let user = new User(1, ownerAddress, 0);
-    
+
     //创始人的所有级别矩阵，默认全部激活，不用付费
     for (let i = 1; i <= MAX_LEVEL; i++) {
         user.activeX3Levels[i] = true;
@@ -242,7 +253,8 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         //发送新用户位置占据事件
         Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, 1, level, referrerAddressUser.x3Matrix[level].referrals.length));
         //还没有全部点亮，那么根据X3的规则，新用户的投入就要转发给直接推荐人，并且直接返回，终止了updateX3Referrer方法的执行
-        return sendWDCDividends(referrerAddress, userAddress, 1, level);
+        sendWDCDividends(referrerAddress, userAddress, 1, level);
+        return;
     }
 
     //以下代码都是对点亮了第3个位置的处理
@@ -312,8 +324,8 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
       返回值包含两个值，一个是确定的接收人地址，一个表示是否奖金滑落
     */
     let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
-    let receiver: Address = wdcReceiver[i32(0)];
-    let isExtraDividends = wdcReceiver[i32(1)];
+    let receiver: Address = wdcReceiver.receiver;
+    let isExtraDividends = wdcReceiver.isExtraDividends;
     //使用send方法向receiver地址转账，
     receiver.transfer(levelPrice.get(level));
 
@@ -325,13 +337,13 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
 
 //确定eth的接收人地址，寻找每一笔交易ETH真正的接收者，检查推荐人的对应矩阵是否阻塞
 //参数：接收地址、发送地址、矩阵类型、矩阵级别
-function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, level: i32): any[] {
+function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, level: i32): FndWdcReceiverResult {
     //将参数中的接收地址赋值给receiver变量
     let receiver = userAddress;
     //
-    let isExtraDividends = true;
+    let isExtraDividends : boolean  = true;
 
-    let result = [];
+    let result = new FndWdcReceiverResult();
 
     //如果是X3矩阵
     if (matrix == 1) {
@@ -348,8 +360,8 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
                 //关于currentReferrer的获得，在之前的方法中已经有过
                 receiver = userDB.getUser(receiver).x3Matrix[level].currentReferrer;
             } else {
-                result.push(receiver);
-                result.push(isExtraDividends);
+                result.receiver = receiver;
+                result.isExtraDividends = isExtraDividends;
                 //返回有效的接收者地址，以及滑落状态
                 return result;
             }
@@ -368,8 +380,8 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
                 //将接收人地址更新为currentReferrer
                 receiver = userDB.getUser(receiver).x6Matrix[level].currentReferrer;
             } else {
-                result.push(receiver);
-                result.push(isExtraDividends);
+                result.receiver = receiver;
+                result.isExtraDividends = isExtraDividends;
                 //如果不是blocked状态，则返回，返回值包含有效的接收人地址以及滑落状态
                 return result;
             }

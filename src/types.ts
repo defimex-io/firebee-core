@@ -23,7 +23,7 @@ function encodeBools(arr: bool[]): ArrayBuffer {
 function decodeBools(buf: ArrayBuffer): bool[] {
     const ret = new Array<bool>();
     const li = RLPList.fromEncoded(buf);
-    for (let i = 0; i < li.length(); i++) {
+    for (let i = 0; i < i32(li.length()); i++) {
         ret.push(li.getItem(i).u8() != 0);
     }
     return ret;
@@ -45,7 +45,7 @@ function encodeX6s(x3: Array<X6 | null>): ArrayBuffer {
 function decodeX6s(buf: ArrayBuffer): Array<X6> {
     const ret = new Array<X6>();
     const li = RLPList.fromEncoded(buf);
-    for (let i = 0; i < li.length(); i++) {
+    for (let i = 0; i < i32(li.length()); i++) {
         ret.push(X6.fromEncoded(li.getRaw(i)));
     }
     return ret;
@@ -68,7 +68,7 @@ function encodeX3s(x3: Array<X3 | null>): ArrayBuffer {
 function decodeX3s(buf: ArrayBuffer): Array<X3> {
     const ret = new Array<X3>();
     const li = RLPList.fromEncoded(buf);
-    for (let i = 0; i < li.length(); i++) {
+    for (let i = 0; i < i32(li.length()); i++) {
         ret.push(X3.fromEncoded(li.getRaw(i)));
     }
     return ret;
@@ -86,7 +86,7 @@ function encodeAddrs(addrs: Address[]): ArrayBuffer {
 function decodedAddrs(buf: ArrayBuffer): Address[] {
     const ret = new Array<Address>();
     const li = RLPList.fromEncoded(buf);
-    for (let i = 0; i < li.length(); i++) {
+    for (let i = 0; i < i32(li.length()); i++) {
         ret.push(new Address(li.getItem(i).bytes()));
     }
     return ret;
@@ -218,3 +218,5 @@ export class X6 {
         return RLP.encodeElements(els);
     }
 }
+
+
