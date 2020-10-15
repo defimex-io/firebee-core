@@ -29,7 +29,7 @@ function decodeBools(buf: ArrayBuffer): bool[] {
     return ret;
 }
 
-function encodeX6s(x3: Array<X6 | null>): ArrayBuffer {
+function encodeX6s(x3: Array<X6>): ArrayBuffer {
     const ret = new Array<ArrayBuffer>();
     for (let i = 0; i < x3.length; i++) {
         if (x3[i] === null) {
@@ -52,7 +52,7 @@ function decodeX6s(buf: ArrayBuffer): Array<X6> {
 }
 
 
-function encodeX3s(x3: Array<X3 | null>): ArrayBuffer {
+function encodeX3s(x3: Array<X3>): ArrayBuffer {
     const ret = new Array<ArrayBuffer>();
     for (let i = 0; i < x3.length; i++) {
         if (x3[i] === null) {
