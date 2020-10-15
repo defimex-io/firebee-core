@@ -129,7 +129,7 @@ export function buyNewLevel(matrix: u64, level: i64): void {
         userDB.setUser(msg.sender, sendUser);
         updateX3Referrer(msg.sender, freeX3Referrer, l);
 
-        Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, 1, l));
+        Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, U256.fromU64(1), U256.fromU64(l)));
 
     } else {
         // require(!users[msg.sender].activeX6Levels[level], "level already activated");
@@ -190,6 +190,7 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     let referrerUser = userDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
     referrerUser.partnersCount = referrerUser.partnersCount + 1;
+    userDB.setUser(userAddress, user);
     userDB.setUser(referrerAddress, referrerUser);
 
     /*确认X3的推荐人地址
@@ -211,9 +212,12 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     updateX3Referrer(userAddress, freeX3Referrer, 1);
     //这里是处理X6矩阵的情况，这个方法与上述类似，先确定X6级别的实际推荐人地址，再进行更新
     // updateX6Referrer(userAddress, findFreeX6Referrer(userAddress, 1), 1);
-
     //发送用户注册事件
-    Context.emit<Registration>(new Registration(userAddress, referrerAddress, userIds.get(userAddress), userIds.get(referrerAddress)));
+    Context.emit<Registration>(new Registration(
+        userAddress, referrerAddress,
+        U256.fromU64(userIds.get(userAddress)),
+        U256.fromU64(userIds.get(referrerAddress)))
+    );
 }
 
 //检查用户推荐人X3模块下某个矩阵是否激活
@@ -224,13 +228,17 @@ function findFreeX3Referrer(userAddress: Address, level: i64): Address {
     while (true) {
         //检测用户推荐人的X3矩阵是否激活，这里注意矩阵级别，也就是下面代码中的level，
         //完整的说，是检测用户推荐人的指定级别的矩阵是否激活
-        if (userDB.getUser(userDB.getUser(userAddress).referrer).activeX3Levels[i32(level)]) {
+        assert(userDB.hasUser(userAddress), 'user exists');
+        const u = userDB.getUser(userAddress)
+        assert(userDB.hasUser(u.referrer), 'referrer exists');
+        const r = userDB.getUser(u.referrer)
+        if (r.activeX3Levels[i32(level)]) {
             //如果是激活的，就返回推荐人地址
-            return userDB.getUser(userAddress).referrer;
+            return u.referrer;
         }
 
         //如果用户推荐人指定级别的X3矩阵没有激活，就将userAddress更新为用户推荐人地址，继续上述的while循环判断
-        userAddress = userDB.getUser(userAddress).referrer;
+        userAddress = u.referrer
     }
 }
 
@@ -247,7 +255,7 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
     //如果推荐人指定级别的X3矩阵的下级点位少于3个，也就是还没都点亮
     if (referrerAddressUser.x3Matrix[i32(level)].referrals.length < 3) {
         //发送新用户位置占据事件
-        Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, 1, level, referrerAddressUser.x3Matrix[i32(level)].referrals.length));
+        Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, U256.fromU64(1), U256.fromU64(level), U256.fromU64(referrerAddressUser.x3Matrix[i32(level)].referrals.length)));
         //还没有全部点亮，那么根据X3的规则，新用户的投入就要转发给直接推荐人，并且直接返回，终止了updateX3Referrer方法的执行
         sendWDCDividends(referrerAddress, userAddress, 1, level);
         return;
@@ -256,7 +264,7 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
     //以下代码都是对点亮了第3个位置的处理
 
     //发送一个新用户占据位置到事件
-    Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, 1, level, 3));
+    Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, U256.fromU64(1), U256.fromU64(level), U256.fromU64(3)));
 
     //如果是正好占据第3个位置，则需要重置矩阵，首先清空本地址对应推荐人地址
     //如下所示，清空了referrals数组，注意用户地址与上级之间的关系是永久存在的，这里清空的只是矩阵中的占位数据
@@ -291,7 +299,7 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         referrerAddressUser.x3Matrix[i32(level)].reinvestCount++;
 
         //发送复投事件
-        Context.emit<Reinvest>(new Reinvest(referrerAddress, freeReferrerAddress, userAddress, 1, level));
+        Context.emit<Reinvest>(new Reinvest(referrerAddress, freeReferrerAddress, userAddress, U256.fromU64(1), U256.fromU64(level)));
 
         //由于发生了复投，所以相当于再次发生了一遍updateX3Referrer，这里是一个递归的过程
         updateX3Referrer(referrerAddress, freeReferrerAddress, level);
@@ -305,7 +313,7 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         userDB.setUser(owner, ownerUser);
 
         //发送复投事件
-        Context.emit<Reinvest>(new Reinvest(owner, ZERO_ADDRESS, userAddress, 1, level));
+        Context.emit<Reinvest>(new Reinvest(owner, ZERO_ADDRESS, userAddress, U256.fromU64(1), U256.fromU64(level)));
     }
     userDB.setUser(referrerAddress, referrerAddressUser);
 }
@@ -327,7 +335,7 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
 
     //如果奖金发生了滑落，则发送一个奖金滑落事件
     if (isExtraDividends) {
-        Context.emit<SentExtraEthDividends>(new SentExtraEthDividends(_from, receiver, matrix, level));
+        Context.emit<SentExtraEthDividends>(new SentExtraEthDividends(_from, receiver, U256.fromU64(matrix), U256.fromU64(level)));
     }
 }
 
@@ -349,7 +357,7 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
             //如果接收者地址对应矩阵的blocked状态是true
             if (userDB.getUser(receiver).x3Matrix[i32(level)].blocked) {
                 //发送奖金烧伤事件
-                Context.emit<MissedWdcReceive>(new MissedWdcReceive(receiver, _from, 1, level));
+                Context.emit<MissedWdcReceive>(new MissedWdcReceive(receiver, _from, U256.fromU64(1), U256.fromU64(level)));
                 //将isExtraDividends的状态更新为true，表示奖金将滑落
                 isExtraDividends = true;
                 //将接收者地址更新为当前接收者地址所在X3矩阵，对应矩阵级别的，有效推荐人地址
@@ -370,7 +378,7 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
             //如果接收地址对应级别的X6矩阵是blocked状态，则继续向上搜索
             if (userDB.getUser(receiver).x6Matrix[i32(level)].blocked) {
                 //发送奖金滑落事件
-                Context.emit<MissedWdcReceive>(new MissedWdcReceive(receiver, _from, 2, level));
+                Context.emit<MissedWdcReceive>(new MissedWdcReceive(receiver, _from, U256.fromU64(2), U256.fromU64(level)));
                 //更新滑落状态为true
                 isExtraDividends = true;
                 //将接收人地址更新为currentReferrer
@@ -391,25 +399,25 @@ export function __idof(type: ABI_DATA_TYPE): u32 {
 }
 
 @unmanaged class NewUserPlace {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i64, readonly place: i64) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: U256, readonly level: U256, readonly place: U256) { }
 }
 
 @unmanaged class MissedWdcReceive {
-    constructor(readonly receiver: Address, readonly from: Address, readonly matrix: u64, readonly level: i64) { }
+    constructor(readonly receiver: Address, readonly from: Address, readonly matrix: U256, readonly level: U256) { }
 }
 
 @unmanaged class SentExtraEthDividends {
-    constructor(readonly from: Address, readonly receiver: Address, readonly matrix: u64, readonly level: i64) { }
+    constructor(readonly from: Address, readonly receiver: Address, readonly matrix: U256, readonly level: U256) { }
 }
 
 @unmanaged class Reinvest {
-    constructor(readonly user: Address, readonly currentReferrer: Address, readonly caller: Address, readonly matrix: u64, readonly level: i64) { }
+    constructor(readonly user: Address, readonly currentReferrer: Address, readonly caller: Address, readonly matrix: U256, readonly level: U256) { }
 }
 
 @unmanaged class Registration {
-    constructor(readonly user: Address, readonly referrer: Address, readonly userId: u64, readonly referrerId: u64) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly userId: U256, readonly referrerId: U256) { }
 }
 
 @unmanaged class Upgrade {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i64) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: U256, readonly level: U256) { }
 }
