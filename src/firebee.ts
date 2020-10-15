@@ -22,9 +22,11 @@ class UserDB {
 }
 
 const idToAddress = Store.from<u64, Address>('idToAddress');
-const userIds = Store.from<Address, U256>('userIds');
+const userIds = Store.from<Address, u64>('userIds');
 const levelPrice = Store.from<u32, U256>('levelPrice');
-const firstPrice: u64 = 10;
+
+// 第一级的价格
+const firstPrice: U256 = U256.fromU64(10);
 const userDB = new UserDB();
 
 export function init(ownerAddress: Address, lastUserId: U256): Address {
@@ -57,7 +59,7 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
     userDB.setUser(ownerAddress, user);
 
     //将创始人记录到ID记录数组中
-    idToAddress.set(ownerAddress, i32(1));
+    idToAddress.set(1, ownerAddress);
 
     //用户ID为1的记录为创始人
     userIds.set(ownerAddress, i32(1));
@@ -78,7 +80,7 @@ export function resetOwner(ownerAddress: Address): void {
     let reUser = userDB.getUser(owner);
     userDB.removeUser(owner);
     userDB.setUser(ownerAddress, reUser);
-    idToAddress.set(ownerAddress, i32(1));
+    idToAddress.set(1, ownerAddress);
     userIds.set(ownerAddress, i32(1));
     Globals.set<Address>('owner', ownerAddress);
     return;
@@ -159,7 +161,7 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     // }
     // require(size == 0, "cannot be a contract");
 
-    let lastUserId = Globals.get<U256>('lastUserId');
+    let lastUserId = Globals.get<u64>('lastUserId');
     //构造User对象
     let user = new User(lastUserId, referrerAddress, 0)
 
@@ -170,11 +172,11 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     //新用户的推荐人地址
     user.referrer = referrerAddress;
     //用户ID->用户地址
-    idToAddress.set(userAddress, lastUserId);
+    idToAddress.set(lastUserId, userAddress);
 
     //新用户记录到ID总册中，同时最新的id+1
     userIds.set(userAddress, lastUserId);
-    Globals.set<U256>('lastUserId', lastUserId + 1);
+    Globals.set<u64>('lastUserId', lastUserId + 1);
 
     let referrerUser = userDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
@@ -309,9 +311,9 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
       这里使用了一个方法findEthReceiver来进行确定
       返回值包含两个值，一个是确定的接收人地址，一个表示是否奖金滑落
     */
-    let findWdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
-    let receiver: Address = findWdcReceiver[i32(0)];
-    let isExtraDividends = findWdcReceiver[i32(1)];
+    let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
+    let receiver: Address = wdcReceiver[i32(0)];
+    let isExtraDividends = wdcReceiver[i32(1)];
     //使用send方法向receiver地址转账，
     receiver.transfer(levelPrice.get(level));
 
@@ -397,7 +399,7 @@ export function __idof(type: ABI_DATA_TYPE): u32 {
 }
 
 @unmanaged class Registration {
-    constructor(readonly user: Address, readonly referrer: Address, readonly userId: U256, readonly referrerId: U256) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly userId: u64, readonly referrerId: u64) { }
 }
 
 @unmanaged class Upgrade {

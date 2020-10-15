@@ -42,14 +42,10 @@ function encodeX6s(x3: Array<X6 | null>): ArrayBuffer {
 }
 
 
-function decodeX6s(buf: ArrayBuffer): Array<X6 | null> {
-    const ret = new Array<X6 | null>();
+function decodeX6s(buf: ArrayBuffer): Array<X6> {
+    const ret = new Array<X6>();
     const li = RLPList.fromEncoded(buf);
     for (let i = 0; i < li.length(); i++) {
-        if (li.isNull(i)) {
-            ret.push(null);
-            continue;
-        }
         ret.push(X6.fromEncoded(li.getRaw(i)));
     }
     return ret;
@@ -69,14 +65,10 @@ function encodeX3s(x3: Array<X3 | null>): ArrayBuffer {
 }
 
 
-function decodeX3s(buf: ArrayBuffer): Array<X3 | null> {
-    const ret = new Array<X3 | null>();
+function decodeX3s(buf: ArrayBuffer): Array<X3> {
+    const ret = new Array<X3>();
     const li = RLPList.fromEncoded(buf);
     for (let i = 0; i < li.length(); i++) {
-        if (li.isNull(i)) {
-            ret.push(null);
-            continue;
-        }
         ret.push(X3.fromEncoded(li.getRaw(i)));
     }
     return ret;
@@ -108,8 +100,8 @@ export class User {
     activeX3Levels: bool[]
     activeX6Levels: bool[]
 
-    x3Matrix: Array<X3 | null>
-    x6Matrix: Array<X6 | null>
+    x3Matrix: Array<X3>
+    x6Matrix: Array<X6>
 
     constructor(id: u64, referrer: Address, patnersCount: u64) {
         this.id = id;
@@ -117,14 +109,14 @@ export class User {
         this.partnersCount = patnersCount;
         this.activeX3Levels = new Array<bool>(MAX_LEVEL + 1);
         this.activeX6Levels = new Array<bool>(MAX_LEVEL + 1);
-        this.x3Matrix = new Array<X3 | null>(MAX_LEVEL + 1);
-        this.x6Matrix = new Array<X6 | null>(MAX_LEVEL + 1);
+        this.x3Matrix = new Array<X3>(MAX_LEVEL + 1);
+        this.x6Matrix = new Array<X6>(MAX_LEVEL + 1);
 
         for (let i = 0; i < MAX_LEVEL + 1; i++) {
             this.activeX3Levels[i] = false;
             this.activeX6Levels[i] = false;
-            this.x3Matrix[i] = null;
-            this.x6Matrix[i] = null;
+            this.x3Matrix[i] = new X3();
+            this.x6Matrix[i] = new X6();
         }
     }
 
