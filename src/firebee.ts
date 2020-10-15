@@ -1,30 +1,30 @@
-import { Address, DB, Store } from "./node_modules/keystore_wdc/lib";
-import { User, MAX_LEVEL , ZERO_ADDRESS, X3, X6} from "./types";
-import {___idof, ABI_DATA_TYPE, Context, Globals, U256} from "./node_modules/keystore_wdc/lib/index";
+import { Address, DB, Store } from "../node_modules/keystore_wdc/lib";
+import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6 } from "./types";
+import { ___idof, ABI_DATA_TYPE, Context, Globals, U256 } from "../node_modules/keystore_wdc/lib/index";
 
-class UserDB{
-    static USER_DB : Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
+class UserDB {
+    static USER_DB: Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
 
-    hasUser(addr: Address): bool{
+    hasUser(addr: Address): bool {
         return UserDB.USER_DB.has(addr);
     }
-    getUser(addr: Address): User{
+    getUser(addr: Address): User {
         return User.fromEncoded(UserDB.USER_DB.get(addr));
     }
 
-    setUser(addr: Address, u: User): void{
+    setUser(addr: Address, u: User): void {
         UserDB.USER_DB.set(addr, u.getEncoded());
     }
 
-    removeUser(addr: Address): void{
+    removeUser(addr: Address): void {
         UserDB.USER_DB.remove(addr);
     }
 }
 
-const idToAddress = Store.from<Address, U256>('idToAddress');
+const idToAddress = Store.from<u64, Address>('idToAddress');
 const userIds = Store.from<Address, U256>('userIds');
-const levelPrice = Store.from<i32, U256>('levelPrice');
-const firstPrice = 10;
+const levelPrice = Store.from<u32, U256>('levelPrice');
+const firstPrice: u64 = 10;
 const userDB = new UserDB();
 
 export function init(ownerAddress: Address, lastUserId: U256): Address {
@@ -32,11 +32,11 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
     Globals.set<U256>('lastUserId', lastUserId);
     // ownerAddress
     //第一个等级是价格设定
-    levelPrice.set(1, firstPrice);
+    levelPrice.set(1, U256.fromU64(firstPrice));
 
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
-        let nextLeverPrice = levelPrice.getOrDefault(i-1, U256.ZERO) * 2;
+        let nextLeverPrice = levelPrice.get(i) * U256.fromU64(2);
         levelPrice.set(i, nextLeverPrice);
     }
 
@@ -45,8 +45,8 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
     Globals.set<Address>('owner', ownerAddress);
 
     //将创始人，也就是合约部署者的地址定义为ID为1的用户
-    let user = new User(1,ZERO_ADDRESS,0);
-
+    let user = new User(1, ownerAddress, 0);
+    
     //创始人的所有级别矩阵，默认全部激活，不用付费
     for (let i = 1; i <= MAX_LEVEL; i++) {
         user.activeX3Levels[i] = true;
@@ -88,13 +88,13 @@ export function resetOwner(ownerAddress: Address): void {
 //参数为：推荐人地址
 //注意，这个方法是一个可以外部调用的方法，同时允许转账ETH,因此带有payable修饰符
 //内部调用了真正处理新用户注册的registration方法
-export function registrationExt(referrerAddress : Address): void{
+export function registrationExt(referrerAddress: Address): void {
     const msg = Context.msg();
     registration(msg.sender, referrerAddress, msg.amount);
 }
 
 //购买级别
-export function buyNewLevel(matrix : u64, level : i32): void {
+export function buyNewLevel(matrix: u64, level: i32): void {
     const msg = Context.msg();
     assert(userDB.hasUser(msg.sender), "user is not exists. Register first.");
     assert(matrix == 1 || matrix == 2, "invalid matrix");
@@ -106,8 +106,8 @@ export function buyNewLevel(matrix : u64, level : i32): void {
     if (matrix == 1) {
         assert(!sendUser.activeX3Levels[level], "level already activated");
 
-        if (sendUser.x3Matrix[level-1].blocked) {
-            sendUser.x3Matrix[level-1].blocked = false;
+        if (sendUser.x3Matrix[level - 1].blocked) {
+            sendUser.x3Matrix[level - 1].blocked = false;
         }
 
         let freeX3Referrer = findFreeX3Referrer(msg.sender, level);
@@ -137,7 +137,7 @@ export function buyNewLevel(matrix : u64, level : i32): void {
 //新用户注册方法
 //参数为：新用户地址、推荐人地址
 //注意，所谓的新用户注册，就是给某个已经加入到矩阵的地址（推荐人地址）投资，同时要符合级别的要求，新用户只能从第一级开始
-function registration(userAddress : Address,referrerAddress : Address, amount: U256) : void {
+function registration(userAddress: Address, referrerAddress: Address, amount: U256): void {
 
     /*这里是一些前置条件的校验，条件分别为：
       1、转账的ETH必须是0.5个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是0.025，加起来就得是0.5,
@@ -161,7 +161,7 @@ function registration(userAddress : Address,referrerAddress : Address, amount: U
 
     let lastUserId = Globals.get<U256>('lastUserId');
     //构造User对象
-    let user = new User(lastUserId, referrerAddress,0)
+    let user = new User(lastUserId, referrerAddress, 0)
 
     //激活X3与x6的第一个级别
     user.activeX3Levels[1] = true;
@@ -174,7 +174,7 @@ function registration(userAddress : Address,referrerAddress : Address, amount: U
 
     //新用户记录到ID总册中，同时最新的id+1
     userIds.set(userAddress, lastUserId);
-    Globals.set<U256>('lastUserId', lastUserId+1);
+    Globals.set<U256>('lastUserId', lastUserId + 1);
 
     let referrerUser = userDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
@@ -210,7 +210,7 @@ function registration(userAddress : Address,referrerAddress : Address, amount: U
 //检查用户推荐人X3模块下某个矩阵是否激活
 //参数为：传入用户地址、X3矩阵级别序列号，并获取实际推荐人地址
 //最终获得的结果是：用户地址的推荐人地址（向上遍历），如果有已经激活指定级别X3矩阵的，就返回那个推荐人地址
-function findFreeX3Referrer(userAddress : Address , level : i32): Address {
+function findFreeX3Referrer(userAddress: Address, level: i32): Address {
     //这里用一个while循环来向上遍历
     while (true) {
         //检测用户推荐人的X3矩阵是否激活，这里注意矩阵级别，也就是下面代码中的level，
@@ -227,7 +227,7 @@ function findFreeX3Referrer(userAddress : Address , level : i32): Address {
 
 //更新X3矩阵
 //参数为：用户地址、推荐人地址（在调用时，会赋值为实际推荐人地址）、矩阵级别
-function updateX3Referrer(userAddress: Address,referrerAddress: Address, level: i32): void {
+function updateX3Referrer(userAddress: Address, referrerAddress: Address, level: i32): void {
 
     //将当前用户地址填入推荐人的X3矩阵下面
     //根据理解，填入的时候，可能处于3种位置，其中第3个位置会触发矩阵重置以及推荐人地址的复投
@@ -253,7 +253,7 @@ function updateX3Referrer(userAddress: Address,referrerAddress: Address, level: 
     referrerAddressUser.x3Matrix[level].referrals = [];
 
     //如果推荐人的之后级别的矩阵未激活并且当前矩阵不是最后一个矩阵，那么该推荐人此矩阵之后的收益取消
-    if (!referrerAddressUser.activeX3Levels[level+1] && level != MAX_LEVEL) {
+    if (!referrerAddressUser.activeX3Levels[level + 1] && level != MAX_LEVEL) {
         /*设置推荐人对应级别的矩阵的阻塞状态为true
           在这里由于用户地址占据了第3个位置，因此导致所处矩阵重置，重置时，对应的referrerAddress地址需要判断是否还能继续接收后续的收益，
           如果referrerAddress具备已经激活的更高一级的矩阵，则仍然可以继续接收滑落的收益，
@@ -303,7 +303,7 @@ function updateX3Referrer(userAddress: Address,referrerAddress: Address, level: 
 //发送ETH
 //参数为：接收者地址、发送地址、对应X3/X6矩阵、矩阵级别
 //同时可以看到这个方法是一个私有方法，也就是不允许在外部直接调用
-function sendWDCDividends(userAddress: Address , _from: Address , matrix : u64 , level: i32 ): void {
+function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, level: i32): void {
 
     /*首先要确定ETH接收人的地址
       这里使用了一个方法findEthReceiver来进行确定
@@ -323,7 +323,7 @@ function sendWDCDividends(userAddress: Address , _from: Address , matrix : u64 ,
 
 //确定eth的接收人地址，寻找每一笔交易ETH真正的接收者，检查推荐人的对应矩阵是否阻塞
 //参数：接收地址、发送地址、矩阵类型、矩阵级别
-function findWdcReceiver(userAddress: Address , _from: Address , matrix: u64 , level: i32) : any[] {
+function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, level: i32): any[] {
     //将参数中的接收地址赋值给receiver变量
     let receiver = userAddress;
     //

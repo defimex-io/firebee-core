@@ -1,4 +1,4 @@
-import { Address, RLP, RLPList } from "./node_modules/keystore_wdc/lib";
+import { Address, RLP, RLPList } from "../node_modules/keystore_wdc/lib";
 
 export const MAX_LEVEL = 16;
 
