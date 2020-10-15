@@ -35,7 +35,9 @@ const userIds = Store.from<Address, u64>('userIds');
 const levelPrice = Store.from<u32, U256>('levelPrice');
 
 // 第一级的价格
-const firstPrice: U256 = U256.fromU64(10);
+const WDC = U256.fromU64(100000000);
+// @ts-ignore
+const firstPrice: U256 = U256.fromU64(10) * WDC;
 const userDB = new UserDB();
 
 export function init(ownerAddress: Address): Address {
@@ -182,11 +184,9 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     user.referrer = referrerAddress;
     //用户ID->用户地址
     idToAddress.set(lastUserId, userAddress);
-
     //新用户记录到ID总册中，同时最新的id+1
     userIds.set(userAddress, lastUserId);
     Globals.set<u64>('lastUserId', lastUserId + 1);
-
     let referrerUser = userDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
     referrerUser.partnersCount = referrerUser.partnersCount + 1;
@@ -198,7 +198,6 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     然后，站在矩阵的角度，还会有一个矩阵实际推荐人，见如下的findFreeX3Referrer方法
     */
     let freeX3Referrer = findFreeX3Referrer(userAddress, 1);
-
     //将新用户的第一个X3级别的矩阵推荐人地址，赋值为freeX3Referrer
     let userx3Matrix = new X3();
     userx3Matrix.currentReferrer = freeX3Referrer;
@@ -210,7 +209,6 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     //将确认到的X3推荐人地址，填入新用户X3第一个矩阵的推荐人地址中
     //注意参数中的freeX3Referrer，这个地址如上所述，是矩阵实际推荐人
     updateX3Referrer(userAddress, freeX3Referrer, 1);
-
     //这里是处理X6矩阵的情况，这个方法与上述类似，先确定X6级别的实际推荐人地址，再进行更新
     // updateX6Referrer(userAddress, findFreeX6Referrer(userAddress, 1), 1);
 

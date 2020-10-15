@@ -1,4 +1,4 @@
-import { Address, RLP, RLPList } from "../node_modules/keystore_wdc/lib";
+import {Address, log, RLP, RLPList} from "../node_modules/keystore_wdc/lib";
 
 export const MAX_LEVEL = 16;
 
@@ -15,7 +15,7 @@ export const ZERO_ADDRESS = new Address((new Uint8Array(20)).buffer);
 function encodeBools(arr: bool[]): ArrayBuffer {
     const ret = new Array<ArrayBuffer>();
     for (let i = 0; i < arr.length; i++) {
-        RLP.encodeU64(arr[i] ? 1 : 0);
+        ret.push(RLP.encodeU64(arr[i] ? 1 : 0));
     }
     return RLP.encodeElements(ret);
 }
@@ -29,14 +29,10 @@ function decodeBools(buf: ArrayBuffer): bool[] {
     return ret;
 }
 
-function encodeX6s(x3: Array<X6>): ArrayBuffer {
+function encodeX6s(x6: Array<X6>): ArrayBuffer {
     const ret = new Array<ArrayBuffer>();
-    for (let i = 0; i < x3.length; i++) {
-        if (x3[i] === null) {
-            ret.push(NULL);
-            continue;
-        }
-        ret.push((<X6>x3[i]).getEncoded());
+    for (let i = 0; i < x6.length; i++) {
+        ret.push(x6[i].getEncoded());
     }
     return RLP.encodeElements(ret);
 }
@@ -55,11 +51,7 @@ function decodeX6s(buf: ArrayBuffer): Array<X6> {
 function encodeX3s(x3: Array<X3>): ArrayBuffer {
     const ret = new Array<ArrayBuffer>();
     for (let i = 0; i < x3.length; i++) {
-        if (x3[i] === null) {
-            ret.push(NULL);
-            continue;
-        }
-        ret.push((<X3>x3[i]).getEncoded());
+        ret.push(x3[i].getEncoded());
     }
     return RLP.encodeElements(ret);
 }
@@ -83,7 +75,7 @@ function encodeAddrs(addrs: Address[]): ArrayBuffer {
     return RLP.encodeElements(els);
 }
 
-function decodedAddrs(buf: ArrayBuffer): Address[] {
+function decodeAddrs(buf: ArrayBuffer): Address[] {
     const ret = new Array<Address>();
     const li = RLPList.fromEncoded(buf);
     for (let i = 0; i < i32(li.length()); i++) {
@@ -144,7 +136,7 @@ export class User {
         u.activeX3Levels = decodeBools(li.getRaw(3));
         u.activeX6Levels = decodeBools(li.getRaw(4));
         u.x3Matrix = decodeX3s(li.getRaw(5));
-        u.x6Matrix = decodeX6s(li.getRaw(5));
+        u.x6Matrix = decodeX6s(li.getRaw(6));
         return u;
     }
 }
@@ -164,7 +156,7 @@ export class X3 {
         const li = RLPList.fromEncoded(buf);
         const x3 = new X3();
         x3.currentReferrer = new Address(li.getItem(0).bytes());
-        x3.referrals = decodedAddrs(li.getRaw(1));
+        x3.referrals = decodeAddrs(li.getRaw(1));
         x3.blocked = li.getItem(2).u8() != 0;
         x3.reinvestCount = li.getItem(3).u64();
         return x3;
@@ -199,8 +191,8 @@ export class X6 {
         const li = RLPList.fromEncoded(buf);
         const x6 = new X6();
         x6.currentReferrer = new Address(li.getItem(0).bytes());
-        x6.firstLevelReferrals = decodedAddrs(li.getRaw(1));
-        x6.secondLevelReferrals = decodedAddrs(li.getRaw(2));
+        x6.firstLevelReferrals = decodeAddrs(li.getRaw(1));
+        x6.secondLevelReferrals = decodeAddrs(li.getRaw(2));
         x6.blocked = li.getItem(3).u8() != 0;
         x6.reinvestCount = li.getItem(4).u64();
         x6.closedPart = new Address(li.getItem(5).bytes());
