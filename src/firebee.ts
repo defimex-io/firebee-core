@@ -1,4 +1,4 @@
-import { Address, DB, Store } from "../node_modules/keystore_wdc/lib";
+import {Address, DB, log, Store} from "../node_modules/keystore_wdc/lib";
 import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6} from "./types";
 import { ___idof, ABI_DATA_TYPE, Context, Globals, U256 } from "../node_modules/keystore_wdc/lib/index";
 
@@ -38,21 +38,19 @@ const levelPrice = Store.from<u32, U256>('levelPrice');
 const firstPrice: U256 = U256.fromU64(10);
 const userDB = new UserDB();
 
-export function init(ownerAddress: Address, lastUserId: U256): Address {
+export function init(ownerAddress: Address): Address {
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
-    Globals.set<U256>('lastUserId', lastUserId);
+    Globals.set<u64>('lastUserId', 2);
     // ownerAddress
     //第一个等级是价格设定
     levelPrice.set(1, firstPrice);
-
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
         // @ts-ignore
-        let nextLeverPrice = levelPrice.get(i) * U256.fromU64(2);
+        let nextLeverPrice = levelPrice.get(i - 1) * U256.fromU64(2);
         // @ts-ignore
         levelPrice.set(i, nextLeverPrice);
     }
-
     //将合约部署人的地址赋值到owner属性
     //owner是可以提供方法修改的，相当于切换合约管理员
     Globals.set<Address>('owner', ownerAddress);
@@ -65,7 +63,6 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
         user.activeX3Levels[i] = true;
         user.activeX6Levels[i] = true;
     }
-
     //将创始人加入到用户记录数组中
     userDB.setUser(ownerAddress, user);
 
@@ -73,7 +70,7 @@ export function init(ownerAddress: Address, lastUserId: U256): Address {
     idToAddress.set(1, ownerAddress);
 
     //用户ID为1的记录为创始人
-    userIds.set(ownerAddress, i32(1));
+    userIds.set(ownerAddress, 1);
 
     return Context.self();
 }
@@ -107,29 +104,30 @@ export function registrationExt(referrerAddress: Address): void {
 }
 
 //购买级别
-export function buyNewLevel(matrix: u64, level: i32): void {
+export function buyNewLevel(matrix: u64, level: i64): void {
     const msg = Context.msg();
+    const l = i32(level)
     assert(userDB.hasUser(msg.sender), "user is not exists. Register first.");
     assert(matrix == 1 || matrix == 2, "invalid matrix");
-    assert(msg.amount == levelPrice.getOrDefault(level, U256.ZERO), "invalid price");
-    assert(level > 1 && level <= MAX_LEVEL, "invalid level");
+    assert(msg.amount == levelPrice.getOrDefault(l, U256.ZERO), "invalid price");
+    assert(l > 1 && l <= MAX_LEVEL, "invalid level");
 
     let sendUser = userDB.getUser(msg.sender);
 
     if (matrix == 1) {
-        assert(!sendUser.activeX3Levels[level], "level already activated");
+        assert(!sendUser.activeX3Levels[l], "level already activated");
 
-        if (sendUser.x3Matrix[level - 1].blocked) {
-            sendUser.x3Matrix[level - 1].blocked = false;
+        if (sendUser.x3Matrix[l - 1].blocked) {
+            sendUser.x3Matrix[l - 1].blocked = false;
         }
 
-        let freeX3Referrer = findFreeX3Referrer(msg.sender, level);
-        sendUser.x3Matrix[level].currentReferrer = freeX3Referrer;
-        sendUser.activeX3Levels[level] = true;
+        let freeX3Referrer = findFreeX3Referrer(msg.sender, l);
+        sendUser.x3Matrix[l].currentReferrer = freeX3Referrer;
+        sendUser.activeX3Levels[l] = true;
         userDB.setUser(msg.sender, sendUser);
-        updateX3Referrer(msg.sender, freeX3Referrer, level);
+        updateX3Referrer(msg.sender, freeX3Referrer, l);
 
-        Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, 1, level));
+        Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, 1, l));
 
     } else {
         // require(!users[msg.sender].activeX6Levels[level], "level already activated");
@@ -395,19 +393,19 @@ export function __idof(type: ABI_DATA_TYPE): u32 {
 }
 
 @unmanaged class NewUserPlace {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i32, readonly place: i32) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i64, readonly place: i64) { }
 }
 
 @unmanaged class MissedWdcReceive {
-    constructor(readonly receiver: Address, readonly from: Address, readonly matrix: u64, readonly level: i32) { }
+    constructor(readonly receiver: Address, readonly from: Address, readonly matrix: u64, readonly level: i64) { }
 }
 
 @unmanaged class SentExtraEthDividends {
-    constructor(readonly from: Address, readonly receiver: Address, readonly matrix: u64, readonly level: i32) { }
+    constructor(readonly from: Address, readonly receiver: Address, readonly matrix: u64, readonly level: i64) { }
 }
 
 @unmanaged class Reinvest {
-    constructor(readonly user: Address, readonly currentReferrer: Address, readonly caller: Address, readonly matrix: u64, readonly level: i32) { }
+    constructor(readonly user: Address, readonly currentReferrer: Address, readonly caller: Address, readonly matrix: u64, readonly level: i64) { }
 }
 
 @unmanaged class Registration {
@@ -415,5 +413,5 @@ export function __idof(type: ABI_DATA_TYPE): u32 {
 }
 
 @unmanaged class Upgrade {
-    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i32) { }
+    constructor(readonly user: Address, readonly referrer: Address, readonly matrix: u64, readonly level: i64) { }
 }
