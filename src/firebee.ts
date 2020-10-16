@@ -32,7 +32,7 @@ class UserDB {
 
 const idToAddress = Store.from<u64, Address>('idToAddress');
 const userIds = Store.from<Address, u64>('userIds');
-const levelPrice = Store.from<u32, U256>('levelPrice');
+const levelPrice = Store.from<u64, U256>('levelPrice');
 
 // 第一级的价格
 const WDC = U256.fromU64(100000000);
@@ -96,6 +96,37 @@ export function resetOwner(ownerAddress: Address): void {
     return;
 }
 
+// 获取最大等级
+export function getMaxLevel(): U256 {
+    return U256.fromU64(MAX_LEVEL);
+}
+
+// 根据地址查看用户
+export function getUserFromAddress(addr: Address): ArrayBuffer {
+    return userDB.getUser(addr).getEncoded();
+}
+
+// 根据地址查看id
+export function getUserIdFromAddress(addr: Address): u64 {
+    return userIds.get(addr);
+}
+
+// 根据id查看地址
+export function getAddressFromUserId(id: u64): Address {
+    return idToAddress.get(id);
+}
+
+// 获取最新UserId
+export function getlastUserId(id: u64): u64 {
+    return Globals.get<u64>('lastUserId');
+}
+
+// 查看级数的价格
+export function getPriceFromLevel(level: u64): U256 {
+    return levelPrice.get(level);
+}
+
+
 //新用户注册
 //参数为：推荐人地址
 //注意，这个方法是一个可以外部调用的方法，同时允许转账wdc,因此带有payable修饰符
@@ -153,7 +184,7 @@ export function buyNewLevel(matrix: u64, level: i64): void {
 function registration(userAddress: Address, referrerAddress: Address, amount: U256): void {
 
     /*这里是一些前置条件的校验，条件分别为：
-      1、转账的wdc必须是200个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是0.025，加起来就得是0.5,
+      1、转账的wdc必须是200个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是100，加起来就得是200,
          同时要注意，是不包含手续费的，也就是说得要推荐人能收到200个wdc
       2、新用户如果在矩阵中已经存在，就不能重复注册
       3、推荐人必须是已经在矩阵中存在的
