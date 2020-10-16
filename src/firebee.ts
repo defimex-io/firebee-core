@@ -37,7 +37,7 @@ const levelPrice = Store.from<u32, U256>('levelPrice');
 // 第一级的价格
 const WDC = U256.fromU64(100000000);
 // @ts-ignore
-const firstPrice: U256 = U256.fromU64(10) * WDC;
+const firstPrice: U256 = U256.fromU64(200) * WDC;
 const userDB = new UserDB();
 
 export function init(ownerAddress: Address): Address {

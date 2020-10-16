@@ -1,6 +1,6 @@
 import {Address, log, RLP, RLPList} from "../node_modules/keystore_wdc/lib";
 
-export const MAX_LEVEL = 16;
+export const MAX_LEVEL = 12;
 
 function getNull(): ArrayBuffer {
     const ret = new Uint8Array(1);
