@@ -98,7 +98,7 @@ export function resetOwner(ownerAddress: Address): void {
 
 //新用户注册
 //参数为：推荐人地址
-//注意，这个方法是一个可以外部调用的方法，同时允许转账ETH,因此带有payable修饰符
+//注意，这个方法是一个可以外部调用的方法，同时允许转账wdc,因此带有payable修饰符
 //内部调用了真正处理新用户注册的registration方法
 export function registrationExt(referrerAddress: Address): void {
     const msg = Context.msg();
@@ -153,8 +153,8 @@ export function buyNewLevel(matrix: u64, level: i64): void {
 function registration(userAddress: Address, referrerAddress: Address, amount: U256): void {
 
     /*这里是一些前置条件的校验，条件分别为：
-      1、转账的ETH必须是0.5个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是0.025，加起来就得是0.5,
-         同时要注意，是不包含手续费的，也就是说得要推荐人能收到0.5个ETH
+      1、转账的wdc必须是200个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是0.025，加起来就得是0.5,
+         同时要注意，是不包含手续费的，也就是说得要推荐人能收到200个wdc
       2、新用户如果在矩阵中已经存在，就不能重复注册
       3、推荐人必须是已经在矩阵中存在的
     */
@@ -318,13 +318,13 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
     userDB.setUser(referrerAddress, referrerAddressUser);
 }
 
-//发送ETH
+//发送wdc
 //参数为：接收者地址、发送地址、对应X3/X6矩阵、矩阵级别
 //同时可以看到这个方法是一个私有方法，也就是不允许在外部直接调用
 function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, level: i64): void {
 
-    /*首先要确定ETH接收人的地址
-      这里使用了一个方法findEthReceiver来进行确定
+    /*首先要确定wdc接收人的地址
+      这里使用了一个方法findWdcReceiver来进行确定
       返回值包含两个值，一个是确定的接收人地址，一个表示是否奖金滑落
     */
     let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
@@ -335,11 +335,11 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
 
     //如果奖金发生了滑落，则发送一个奖金滑落事件
     if (isExtraDividends) {
-        Context.emit<SentExtraEthDividends>(new SentExtraEthDividends(_from, receiver, U256.fromU64(matrix), U256.fromU64(level)));
+        Context.emit<SentExtraWdcDividends>(new SentExtraWdcDividends(_from, receiver, U256.fromU64(matrix), U256.fromU64(level)));
     }
 }
 
-//确定eth的接收人地址，寻找每一笔交易ETH真正的接收者，检查推荐人的对应矩阵是否阻塞
+//确定wdc的接收人地址，寻找每一笔交易WDC真正的接收者，检查推荐人的对应矩阵是否阻塞
 //参数：接收地址、发送地址、矩阵类型、矩阵级别
 function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, level: i64): FndWdcReceiverResult {
     //将参数中的接收地址赋值给receiver变量
@@ -406,7 +406,7 @@ export function __idof(type: ABI_DATA_TYPE): u32 {
     constructor(readonly receiver: Address, readonly from: Address, readonly matrix: U256, readonly level: U256) { }
 }
 
-@unmanaged class SentExtraEthDividends {
+@unmanaged class SentExtraWdcDividends {
     constructor(readonly from: Address, readonly receiver: Address, readonly matrix: U256, readonly level: U256) { }
 }
 
