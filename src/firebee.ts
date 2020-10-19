@@ -33,6 +33,7 @@ class UserDB {
 const idToAddress = Store.from<u64, Address>('idToAddress');
 const userIds = Store.from<Address, u64>('userIds');
 const levelPrice = Store.from<u64, U256>('levelPrice');
+const blackPrice = Store.from<u64, U256>('blackPrice');
 
 // 第一级的价格
 const WDC = U256.fromU64(100000000);
@@ -40,19 +41,26 @@ const WDC = U256.fromU64(100000000);
 const firstPrice: U256 = U256.fromU64(200) * WDC;
 const userDB = new UserDB();
 
-export function init(ownerAddress: Address): Address {
+export function init(ownerAddress: Address, blackHoleAddress : Address): Address {
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
     Globals.set<u64>('lastUserId', 2);
+    Globals.set<Address>('blackHoleAddress', blackHoleAddress);
     // ownerAddress
     //第一个等级是价格设定
     // @ts-ignore
-    levelPrice.set(1, firstPrice/2);
+    levelPrice.set(1, firstPrice/2*95/100);
+    // @ts-ignore
+    blackPrice.set(1, firstPrice/2*5/100);
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
         // @ts-ignore
         let nextLeverPrice = levelPrice.get(i - 1) * U256.fromU64(2);
         // @ts-ignore
+        let nextBlackPrice = blackPrice.get(i - 1) * U256.fromU64(2);
+        // @ts-ignore
         levelPrice.set(i, nextLeverPrice);
+        // @ts-ignore
+        blackPrice.set(i, nextBlackPrice);
     }
     //将合约部署人的地址赋值到owner属性
     //owner是可以提供方法修改的，相当于切换合约管理员
@@ -127,6 +135,10 @@ export function getPriceFromLevel(level: u64): U256 {
     return levelPrice.get(level);
 }
 
+// 查看级数黑洞的价格
+export function getBlackPriceFromLevel(level: u64): U256 {
+    return blackPrice.get(level);
+}
 
 //新用户注册
 //参数为：推荐人地址
@@ -362,9 +374,10 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
     let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
     let receiver: Address = wdcReceiver.receiver;
     let isExtraDividends = wdcReceiver.isExtraDividends;
+    let blackHoleAddress : Address = Globals.get('blackHoleAddress');
     //使用send方法向receiver地址转账，
     receiver.transfer(levelPrice.get(u32(level)));
-
+    blackHoleAddress.transfer(blackPrice.get(u32(level)));
     //如果奖金发生了滑落，则发送一个奖金滑落事件
     if (isExtraDividends) {
         Context.emit<SentExtraWdcDividends>(new SentExtraWdcDividends(_from, receiver, U256.fromU64(matrix), U256.fromU64(level)));
