@@ -48,9 +48,9 @@ export function init(ownerAddress: Address, blackHoleAddress : Address): Address
     // ownerAddress
     //第一个等级是价格设定
     // @ts-ignore
-    levelPrice.set(1, firstPrice/2*95/100);
+    levelPrice.set(1, firstPrice * U256.fromU64(95/200));
     // @ts-ignore
-    blackPrice.set(1, firstPrice/2*5/100);
+    blackPrice.set(1, firstPrice * U256.fromU64(5/200));
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
         // @ts-ignore
@@ -374,7 +374,7 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
     let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
     let receiver: Address = wdcReceiver.receiver;
     let isExtraDividends = wdcReceiver.isExtraDividends;
-    let blackHoleAddress : Address = Globals.get('blackHoleAddress');
+    let blackHoleAddress : Address = Globals.get<Address>('blackHoleAddress');
     //使用send方法向receiver地址转账，
     receiver.transfer(levelPrice.get(u32(level)));
     blackHoleAddress.transfer(blackPrice.get(u32(level)));
