@@ -48,9 +48,9 @@ export function init(ownerAddress: Address, blackHoleAddress : Address): Address
     // ownerAddress
     //第一个等级是价格设定
     // @ts-ignore
-    levelPrice.set(1, firstPrice * U256.fromU64(95/200));
+    levelPrice.set(1, firstPrice * U256.fromU64(95)/ U256.fromU64(200));
     // @ts-ignore
-    blackPrice.set(1, firstPrice * U256.fromU64(5/200));
+    blackPrice.set(1, firstPrice * U256.fromU64(5)/ U256.fromU64(200));
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
         // @ts-ignore
