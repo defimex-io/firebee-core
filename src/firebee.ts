@@ -126,7 +126,7 @@ export function getAddressFromUserId(id: u64): Address {
 }
 
 // 获取最新UserId
-export function getlastUserId(id: u64): u64 {
+export function getlastUserId(): u64 {
     return Globals.get<u64>('lastUserId');
 }
 
@@ -155,7 +155,8 @@ export function buyNewLevel(matrix: u64, level: i64): void {
     const l = i32(level)
     assert(userDB.hasUser(msg.sender), "user is not exists. Register first.");
     assert(matrix == 1 || matrix == 2, "invalid matrix");
-    assert(msg.amount == levelPrice.getOrDefault(l, U256.ZERO), "invalid price");
+    // @ts-ignore
+    assert(msg.amount == levelPrice.get(l) + blackPrice.get(l), "invalid price");
     assert(l > 1 && l <= MAX_LEVEL, "invalid level");
 
     let sendUser = userDB.getUser(msg.sender);
@@ -202,7 +203,7 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
       2、新用户如果在矩阵中已经存在，就不能重复注册
       3、推荐人必须是已经在矩阵中存在的
     */
-    assert(amount == firstPrice, "registration cost ${ firstPrice }");
+    assert(amount == firstPrice, "registration cost 200");
     assert(!userDB.hasUser(userAddress), "user exists");
     assert(userDB.hasUser(referrerAddress), "referrer not exists");
 
