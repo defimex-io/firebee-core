@@ -86,11 +86,21 @@ class Command{
     async getOwner(): Promise<Readable>{
         return rpc.viewContract(this.contract(), 'getOwner')
     }
+
+    async register(u: number, referrer: number): Promise<TransactionResult>{
+        const c = this.contract()
+        const sk = privateKeys[u]
+        const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
+        const r = sk2Addr(privateKeys[referrer])
+        const tx = builder.buildContractCall(c, 'registrationExt', [r], '20000000000')
+        return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+    }
 }
 
 async function main(){
     const m = process.env['METHOD']
     const u = process.env['USER']
+    const r = process.env['REFERRER']
     const cmd = new Command()
 
     if(!m)
@@ -108,6 +118,9 @@ async function main(){
             break
         case 'user':
             console.log(await cmd.getUser(parseInt(u)))
+            break
+        case 'register':
+            console.log(await cmd.register(parseInt(u), parseInt(r)))
             break
     }
 }

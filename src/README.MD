@@ -221,7 +221,7 @@ METHOD=wdc USER=1 node -r ts-node/register test/firebee-test.ts
 
 查询 owner = 1KRQ6bYBFghXWk8opHzCpENxzDHPF8npfV
 ```shell script
-METHOD=getOwner node -r ts-node/register test/firebee-test.ts
+METHOD=getOwner CONTRACT_ADDRESS=node -r ts-node/register test/firebee-test.ts
 ``` 
 
 
@@ -229,4 +229,13 @@ METHOD=getOwner node -r ts-node/register test/firebee-test.ts
 
 ```shell script
 METHOD=user USER=1 node -r ts-node/register test/firebee-test.ts
+```
+
+
+- 2, 3, 4 推荐 1 
+
+```shell script
+METHOD=register USER=2 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
+METHOD=register USER=3 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
+METHOD=register USER=3 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
 ```
