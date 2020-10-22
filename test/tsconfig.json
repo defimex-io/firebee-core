@@ -1,0 +1,6 @@
+{
+  "module": "commonjs",
+  "files": ["./*.ts"],
+  "moduleResolution": "node",
+  "lib": ["es2015"]
+}

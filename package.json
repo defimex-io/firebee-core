@@ -17,7 +17,11 @@
   },
   "homepage": "https://github.com/defimex-io/firebee-core#readme",
   "devDependencies": {
-    "keystore_wdc": "^0.3.8-beta",
+    "@types/node": "^14.14.0",
+    "keystore_wdc": "^0.4.5-beta",
+    "rlp": "^2.2.6",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.3",
     "ws": "^7.3.1"
   }
 }

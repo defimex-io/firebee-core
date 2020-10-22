@@ -1,0 +1,122 @@
+import tool = require('keystore_wdc/contract')
+import fs = require('fs')
+import {ABI, Contract, TransactionResult, Readable} from "keystore_wdc/contract";
+const path = require('path')
+const entry = path.join(__dirname, '../src/firebee.ts')
+const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
+const contractAddress = process.env['CONTRACT_ADDRESS']
+import rlp = require('./rlp')
+import {User} from "./types";
+
+const privateKeys = [
+    null, // starts with 1
+    '56df79d38cb8146a4a4bde7460715574db087cf867d54768a4bed1d2f0a4baa7',
+    'ba661c8c32e398fdae9ea27d9102ce63cee678ad55a0986c33412a48fd373d59',
+    'bb4423272bf8fb2250181648d31ea5d64637c1472610ea7a5267056f8a70e4c4',
+    'dfca2f6630ceda4b7c72f244cc5429517e11d6b2318e82224ba5377487d99853',
+    '3bd9df770d3d94c18f6c9f92e85034e5eec9f8c641aa62b718af7ba451c5f8f5',
+    'deaf1afaccefc131379516e9a607f28e59bdfbb40f883ad7325260b41f9c8d3c',
+    'f08edbf60ceb34df6c28e60d966e6895b98f148493fc222448eb6920a96819fa',
+    '75bfc0e817e702b7ffbcfff64d7d821b22015ccf75dea713f20817fc62968be8',
+    '362d3e7ad7f6c5cfcada9022caeb1e6e5d7f32449d323f0b240148cf36d312fa',
+    '309761a1c7db26089f03b772dc0453bb7a3145871482306e3b2ffdcfe144dcde',
+    'eba062c463c517450d9a3c18f5a533c0f835e399594ed377d9fa8ab5e1edeed7',
+    '06a8c312bc4739020844b4072aee21c7e892fe698c51d49d4e38c473fa4341d4',
+    '2e5de9674ecacbdd2d04ecb954e9b2d858f815c42aeb0fc9afc75067d37d4955',
+    '3fafddf19271e74ac1ab5dde9ae26b54a05ae1b5e5e30c3de04015c8e9932868',
+    '907869f34dca0e4144ca890a6940ca84e77d6305d17d9ffe387b09e3ea4f6a78',
+    'c417d50cea71b494c7f047af1b1a500484a6b351e25cd093282f6bc7114b6a39',
+    '2cf412d3d731db7ad48eead101ae478a30d4cd1e051dab69d39fcfd35abcc39d',
+    'a4c7e1b2fe184601d9b5e00e75317a6cfed9b19c332435ff98cf0b1e19f47692',
+    '2e4b2ad704762ace8d5f71843bb3052b581d7f17a0ed700ccfb761a283cb0de3',
+    '65a289ae8590734e358da0e88b0d4b5c4bb31e612079b6ee1ca04ce3ed0042d4'
+]
+
+// convert private key to address
+function sk2Addr(sk: string): string{
+    return tool.publicKeyHash2Address(tool.publicKey2Hash(tool.privateKey2PublicKey(sk)))
+}
+
+class Command{
+    private static _abi: ABI[]
+
+    // 部署
+    async deploy(idx: number): Promise<TransactionResult>{
+        const sk = privateKeys[idx]
+        const buf = await this.compile()
+        const c = new tool.Contract('', this.abi(), buf)
+        c.abi = this.abi()
+        const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
+        const ownerAddr = sk2Addr(sk)
+        const tx = builder.buildDeploy(c, [ownerAddr, 'WX1111111111111111111115vGLbG'])
+        return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+    }
+
+    // get nonce by private key
+    async getNonceBySK(sk: string): Promise<number>{
+        const n = await rpc.getNonce(sk2Addr(sk))
+        return typeof n === 'number' ? n : parseInt(n)
+    }
+
+    compile(): Promise<Uint8Array>{
+        const ascPath = process.env['ASC_PATH'] || path.join(__dirname, '../node_modules/.bin/asc')
+        return tool.compileContract(ascPath, entry)
+    }
+
+    abi(): ABI[] {
+        if(Command._abi)
+            return Command._abi
+        const f = fs.readFileSync(entry)
+        Command._abi = tool.compileABI(f)
+        return Command._abi
+    }
+
+    contract(): Contract{
+        return new Contract(contractAddress, this.abi())
+    }
+
+    async getUser(idx: number): Promise<User>{
+        const c = this.contract()
+        const sk = privateKeys[idx]
+        const addr = sk2Addr(sk)
+        const r = await rpc.viewContract(c, 'getUserFromAddress', [addr])
+        return User.fromEncoded(rlp.decodeHex(<string> r))
+    }
+
+    async getOwner(): Promise<Readable>{
+        return rpc.viewContract(this.contract(), 'getOwner')
+    }
+}
+
+async function main(){
+    const m = process.env['METHOD']
+    const u = process.env['USER']
+    const cmd = new Command()
+
+    if(!m)
+        return
+
+    switch (m){
+        case 'deploy':
+            console.log(await cmd.deploy(parseInt(u)))
+            break
+        case 'wdc':
+            console.log(await rpc.getBalance(sk2Addr(privateKeys[parseInt(u)])))
+            break
+        case 'getOwner':
+            console.log(await cmd.getOwner())
+            break
+        case 'user':
+            console.log(await cmd.getUser(parseInt(u)))
+            break
+    }
+}
+
+
+main()
+    .then(() => rpc.close())
+    .catch((e) => {
+        console.error(e)
+        rpc.close()
+    })
+

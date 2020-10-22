@@ -150,6 +150,8 @@ export class X3 {
     constructor() {
         this.currentReferrer = ZERO_ADDRESS;
         this.referrals = []
+        this.blocked = false
+        this.reinvestCount = 0
     }
 
     static fromEncoded(buf: ArrayBuffer): X3 {
@@ -184,7 +186,9 @@ export class X6 {
         this.currentReferrer = ZERO_ADDRESS;
         this.firstLevelReferrals = []
         this.secondLevelReferrals = []
-        this.closedPart = ZERO_ADDRESS;
+        this.blocked = false
+        this.reinvestCount = 0
+        this.closedPart = ZERO_ADDRESS
     }
 
     static fromEncoded(buf: ArrayBuffer): X6 {

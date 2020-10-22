@@ -1,10 +1,9 @@
 const tool = require('keystore_wdc/contract')
 const fs = require('fs')
-const entry = './src/firebee.ts'
+const entry = './src/firebee-test.ts'
 const sk = process.env['PRIVATE_KEY']
 
 const keys = [
-    'ca2df2091c47d9b13e8b2ac9d9877af35b13d008abaa6e3d204d25dcfd5760cc',
     'dba900aae6b7cbef4623e704db5e145f92832cf4217ca50a173af318b895a586',
     'fe61c314b09570f2662322fd4c12dcc5c1673682953df1ad4d821ede0e8f06c4',
     '97ed7d0e3da437df9b3fd5a592fce903c1227a22b6d707f8d4d902e941126189'

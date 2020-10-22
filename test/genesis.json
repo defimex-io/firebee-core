@@ -1,0 +1,112 @@
+{
+  "config": {
+    "chainId": 0,
+    "Block": 0
+  },
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "nBits": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "nonce": "0x0000000000000042",
+  "extraData": "Let credit flow unprecedented,let infinite imagination possible,let infinite value can be reflected,To every corner of the planet.",
+  "hashBlock": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp": 1562548148,
+  "alloc": {
+    "incubateAmount": [
+      {
+        "addr": "1PpBHEx782C4VrtnQcJRTogn5UYmzCWAPH",
+        "balance": 35765823
+      }
+    ],
+    "initAmount": [
+      {
+        "addr": "1PpBHEx782C4VrtnQcJRTogn5UYmzCWAPH",
+        "balance": 35765823
+      },
+      {
+        "addr": "1AJuWsi83jDFXxk5h7c83zhYjGfGJvVNjd",
+        "balance": 10000000
+      },
+      {
+        "addr": "1KRQ6bYBFghXWk8opHzCpENxzDHPF8npfV",
+        "balance": 10000000
+      },
+      {
+        "addr": "18PHh1yLX7HTXqX2oWhkiJmY2NWhb2bA17",
+        "balance": 10000000
+      },
+      {
+        "addr": "14jCZUfpywtZnimj4T1rgKh8pjyL4WW37g",
+        "balance": 10000000
+      },
+      {
+        "addr": "1PCy75hB5V6276ky7r3zeb5CAc9UD4DqLq",
+        "balance": 10000000
+      },
+      {
+        "addr": "1M8jHScegmwBv1ffobp7LwPuGLGpkxzMAE",
+        "balance": 10000000
+      },
+      {
+        "addr": "1P539tNSqCLaHcH8k12UJX7ES9LeuqHViP",
+        "balance": 10000000
+      },
+      {
+        "addr": "1PShMQMqFT4N4s1gnrgDtiwfYUxKAUB7Ac",
+        "balance": 10000000
+      },
+      {
+        "addr": "1JAhM3yHHcrjPPWwFEB8CCFEYY4NiDzkay",
+        "balance": 10000000
+      },
+      {
+        "addr": "18aoMT4fQxrrcq6JLuJQBdJ3jJJQaNigKv",
+        "balance": 10000000
+      },
+      {
+        "addr": "1M2gWaGwt99FJqJ9qAu6N7Z5sTA1nz2bMD",
+        "balance": 10000000
+      },
+      {
+        "addr": "1ZS6oCZFrbQkzUYmULCNDZDossqWfV65c",
+        "balance": 10000000
+      },
+      {
+        "addr": "1Bnq8W6MFsrDmtnESRhV1r8SWsEkBPGzsB",
+        "balance": 10000000
+      },
+      {
+        "addr": "1CKXtZ3nMX7JoYzycWzX9jb8VJzofpYcSq",
+        "balance": 10000000
+      },
+      {
+        "addr": "1M8j7NXSVUwfYTQt1wuVo4VDcdCXXE4Efg",
+        "balance": 10000000
+      },
+      {
+        "addr": "11qg9pSSsZc2F9QaiE61eAnmomptKkfP7",
+        "balance": 10000000
+      },
+      {
+        "addr": "1DnB3yVmxX5kYvGuYHmXsRxMXg4FKmcQJD",
+        "balance": 10000000
+      },
+      {
+        "addr": "12J3SHmYZ639PsSWVKSfZgdhUazTghnKmC",
+        "balance": 10000000
+      },
+      {
+        "addr": "1Cehek5xu2PZPRnf2FZjqtrjNcszePp16C",
+        "balance": 10000000
+      },
+      {
+        "addr": "1NRSPBydAASXDud4K35XkmHCcRNwQM6naQ",
+        "balance": 10000000
+      },
+      {
+        "addr": "1GnQs9YWCX84Xp7dTfTk3ZNhVLAdYuoX5y",
+        "balance": 10000000
+      }
+    ],
+    "userIncubateAmount": []
+  }
+}
