@@ -41,10 +41,9 @@ const WDC = U256.fromU64(100000000);
 const firstPrice: U256 = U256.fromU64(200) * WDC;
 const userDB = new UserDB();
 
-export function init(ownerAddress: Address, blackHoleAddress : Address): Address {
+export function init(ownerAddress: Address): Address {
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
     Globals.set<u64>('lastUserId', 2);
-    Globals.set<Address>('blackHoleAddress', blackHoleAddress);
     // ownerAddress
     //第一个等级是价格设定
     // @ts-ignore
@@ -375,10 +374,9 @@ function sendWDCDividends(userAddress: Address, _from: Address, matrix: u64, lev
     let wdcReceiver = findWdcReceiver(userAddress, _from, matrix, level);
     let receiver: Address = wdcReceiver.receiver;
     let isExtraDividends = wdcReceiver.isExtraDividends;
-    let blackHoleAddress : Address = Globals.get<Address>('blackHoleAddress');
     //使用send方法向receiver地址转账，
     receiver.transfer(levelPrice.get(u32(level)));
-    blackHoleAddress.transfer(blackPrice.get(u32(level)));
+    ZERO_ADDRESS.transfer(blackPrice.get(u32(level)));
     //如果奖金发生了滑落，则发送一个奖金滑落事件
     if (isExtraDividends) {
         Context.emit<SentExtraWdcDividends>(new SentExtraWdcDividends(_from, receiver, U256.fromU64(matrix), U256.fromU64(level)));
