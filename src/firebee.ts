@@ -170,6 +170,7 @@ export function buyNewLevel(matrix: u64, level: i64): void {
         let freeX3Referrer = findFreeX3Referrer(msg.sender, l);
         sendUser.x3Matrix[l].currentReferrer = freeX3Referrer;
         sendUser.activeX3Levels[l] = true;
+
         updateX3Referrer(msg.sender, freeX3Referrer, l);
 
         Context.emit<Upgrade>(new Upgrade(msg.sender, freeX3Referrer, U256.fromU64(1), U256.fromU64(l)));
@@ -182,7 +183,7 @@ export function buyNewLevel(matrix: u64, level: i64): void {
         }
 
         let freeX6Referrer = findFreeX6Referrer(msg.sender, l);
-
+        sendUser.x6Matrix[l].currentReferrer = freeX6Referrer;
         sendUser.activeX6Levels[l] = true;
         updateX6Referrer(msg.sender, freeX6Referrer, l);
 
@@ -234,7 +235,6 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     let referrerUser = userDB.getUser(referrerAddress);
     //用户推荐人地址的团队总数+1
     referrerUser.partnersCount = referrerUser.partnersCount + 1;
-    userDB.setUser(userAddress, user);
     userDB.setUser(referrerAddress, referrerUser);
 
     /*确认X3的推荐人地址
@@ -244,9 +244,11 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     */
     let freeX3Referrer = findFreeX3Referrer(userAddress, 1);
     //将新用户的第一个X3级别的矩阵推荐人地址，赋值为freeX3Referrer
-    let userx3Matrix = new X3();
-    userx3Matrix.currentReferrer = freeX3Referrer;
-    user.x3Matrix[1] = userx3Matrix;
+    user.x3Matrix[1].currentReferrer = freeX3Referrer;
+
+    let freeX6Referrer = findFreeX6Referrer(userAddress, 1);
+    //将新用户的第一个X6级别的矩阵推荐人地址，赋值为freeX6Referrer
+    user.x6Matrix[1].currentReferrer = freeX6Referrer;
 
     //保存新用户数据
     userDB.setUser(userAddress, user);
@@ -255,7 +257,7 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     //注意参数中的freeX3Referrer，这个地址如上所述，是矩阵实际推荐人
     updateX3Referrer(userAddress, freeX3Referrer, 1);
     //这里是处理X6矩阵的情况，这个方法与上述类似，先确定X6级别的实际推荐人地址，再进行更新
-    updateX6Referrer(userAddress, findFreeX6Referrer(userAddress, 1), 1);
+    updateX6Referrer(userAddress, freeX6Referrer, 1);
     //发送用户注册事件
     Context.emit<Registration>(new Registration(
         userAddress, referrerAddress,
