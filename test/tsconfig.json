@@ -1,6 +1,15 @@
 {
   "module": "commonjs",
-  "files": ["./*.ts"],
+  "files": ["*.ts"],
   "moduleResolution": "node",
-  "lib": ["es2015"]
+  "lib": ["es5"],
+  "include": ["*.ts"],
+  "compilerOptions": {
+    "sourceMap": true, // 是否生成map文件
+    "module": "commonjs", // 指定生成哪个模块系统代码
+    "removeComments": true, // 是否移除注释
+    "target": "ES5",
+    "outDir": "./dist",
+    "declaration": true // 是否自动创建类型声明文件
+  }
 }
