@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  node12:
+    image: 'node:12.13.1'
+    container_name: 'node12'
+    entrypoint: 'node -r ts-node/register test/firebee-test.ts'
+    working_dir: '/firebee'
+    volumes:
+      - ../:/firebee
+    environment: 
+      - METHOD=compile
