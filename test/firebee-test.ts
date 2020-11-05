@@ -60,7 +60,7 @@ class Command{
 
     compile(): Promise<Uint8Array>{
         const ascPath = process.env['ASC_PATH'] || path.join(__dirname, '../node_modules/.bin/asc')
-        return tool.compileContract(ascPath, entry)
+        return tool.compileContract(entry, null)
     }
 
     abi(): ABI[] {
@@ -84,7 +84,7 @@ class Command{
     }
 
     async getOwner(): Promise<Readable>{
-        return rpc.viewContract(this.contract(), 'getOwner')
+        return rpc.viewContract(this.contract(), 'getOwner', [])
     }
 
     async register(u: number, referrer: number): Promise<TransactionResult>{
@@ -121,6 +121,10 @@ async function main(){
             break
         case 'register':
             console.log(await cmd.register(parseInt(u), parseInt(r)))
+            break
+        case 'compile':
+            console.log('编译文件长度')
+            console.log((await cmd.compile()).length)
             break
     }
 }
