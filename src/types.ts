@@ -1,4 +1,5 @@
-import {Address, log, RLP, RLPList} from "../node_modules/keystore_wdc/lib";
+import { Address, log, RLP, RLPList } from "../node_modules/keystore_wdc/lib";
+import { idToAddress, userDB } from './firebee'
 
 export const MAX_LEVEL = 12;
 
@@ -138,6 +139,12 @@ export class User {
         u.x3Matrix = decodeX3s(li.getRaw(5));
         u.x6Matrix = decodeX6s(li.getRaw(6));
         return u;
+    }
+
+    // 将内存修改持久化到 db 中
+    save(): void{
+        const addr = idToAddress.get(this.id);
+        userDB.setUser(addr, this);
     }
 }
 
