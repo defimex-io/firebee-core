@@ -23,6 +23,10 @@ const WDC = U256.fromU64(100000000);
 const firstPrice: U256 = U256.fromU64(200) * WDC;
 
 export function init(ownerAddress: Address): Address {
+    // 因为 solidty 的 map 会有默认的 key-value pair, 所以需要一个 0 地址用户，和 solidity 的 map 兼容
+    userDB.setUser(ZERO_ADDRESS, new User(0, ZERO_ADDRESS, 0));
+    idToAddress.set(0, ZERO_ADDRESS);
+
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
     Globals.set<u64>('lastUserId', 2);
     // ownerAddress
@@ -127,6 +131,7 @@ export function getBlackPriceFromLevel(level: u64): U256 {
 export function registrationExt(referrerAddress: Address): void {
     const msg = Context.msg();
     registration(msg.sender, referrerAddress, msg.amount);
+    userDB.persist();
 }
 
 //购买级别
@@ -151,7 +156,6 @@ export function buyNewLevel(matrix: u64, level: i64): void {
         let freeX3Referrer = findFreeX3Referrer(msg.sender, l);
         sendUser.x3Matrix[l].currentReferrer = freeX3Referrer;
         sendUser.activeX3Levels[l] = true;
-        sendUser.save();
 
         updateX3Referrer(msg.sender, freeX3Referrer, l);
 
@@ -167,12 +171,13 @@ export function buyNewLevel(matrix: u64, level: i64): void {
         let freeX6Referrer = findFreeX6Referrer(msg.sender, l);
         sendUser.x6Matrix[l].currentReferrer = freeX6Referrer;
         sendUser.activeX6Levels[l] = true;
-        sendUser.save();
 
         updateX6Referrer(msg.sender, freeX6Referrer, l);
 
         Context.emit<Upgrade>(new Upgrade(msg.sender, freeX6Referrer, U256.fromU64(2), U256.fromU64(l)));
     }
+
+    userDB.persist();
 }
 
 //新用户注册方法
@@ -203,6 +208,8 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     let lastUserId = Globals.get<u64>('lastUserId');
     //构造User对象
     let user = new User(lastUserId, referrerAddress, 0)
+    // 刚创建的用户先要保存
+    userDB.setUser(userAddress, user);
 
     //激活X3与x6的第一个级别
     user.activeX3Levels[1] = true;
@@ -219,8 +226,7 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     //用户推荐人地址的团队总数+1
     referrerUser.partnersCount = referrerUser.partnersCount + 1;
 
-    referrerUser.save();
-    user.save();
+
 
     /*确认X3的推荐人地址
     这里要注意，不是上述的推荐人地址，而是用户所在X3矩阵的实际推荐人地址，这个地方容易产生混淆性，
@@ -235,7 +241,6 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
     //将新用户的第一个X6级别的矩阵推荐人地址，赋值为freeX6Referrer
     user.x6Matrix[1].currentReferrer = freeX6Referrer;
 
-    user.save();
 
 
     //将确认到的X3推荐人地址，填入新用户X3第一个矩阵的推荐人地址中
@@ -282,7 +287,6 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
     //根据理解，填入的时候，可能处于3种位置，其中第3个位置会触发矩阵重置以及推荐人地址的复投
     let referrerAddressUser = userDB.getUser(referrerAddress);
     referrerAddressUser.x3Matrix[i32(level)].referrals.push(userAddress);
-    referrerAddressUser.save();
 
     //如果推荐人指定级别的X3矩阵的下级点位少于3个，也就是还没都点亮
     if (referrerAddressUser.x3Matrix[i32(level)].referrals.length < 3) {
@@ -314,7 +318,6 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         //在代码中，只有购买级别的方法中，有对blocked属性设置为false的地方，因此，一旦blocked后，就只能通过购买级别来激活了
     }
 
-    referrerAddressUser.save();
     let owner = Globals.get<Address>('owner');
     //如果实际推荐人地址不是创始人地址
     if (referrerAddress != owner) {
@@ -333,7 +336,6 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         //发送复投事件
         Context.emit<Reinvest>(new Reinvest(referrerAddress, freeReferrerAddress, userAddress, U256.fromU64(1), U256.fromU64(level)));
 
-        referrerAddressUser.save();
         //由于发生了复投，所以相当于再次发生了一遍updateX3Referrer，这里是一个递归的过程
         updateX3Referrer(referrerAddress, freeReferrerAddress, level);
     } else {
@@ -343,7 +345,6 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
         //创始人地址对应级别的团队总数+1
         let ownerUser = userDB.getUser(owner);
         ownerUser.x3Matrix[i32(level)].reinvestCount++;
-        ownerUser.save();
 
         //发送复投事件
         Context.emit<Reinvest>(new Reinvest(owner, ZERO_ADDRESS, userAddress, U256.fromU64(1), U256.fromU64(level)));
@@ -444,13 +445,11 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
     if (referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals.length < 2) {
         //将用户地址填充到推荐人地址的firstLevelReferrals中
         referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals.push(userAddress);
-        referrerAddressUser.save();
         //发送用户地址占位的事件：用户地址、推荐人地址、X6模块、对应矩阵等级、放在第一层级的哪个位置
         Context.emit<NewUserPlace>(new NewUserPlace(userAddress, referrerAddress, U256.fromU64(2), U256.fromU64(level), U256.fromU64(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals.length)));
 
         //用户地址对应级别的x6矩阵，其currentReferrer更新为referrerAddress
         userAddressUser.x6Matrix[i32(level)].currentReferrer = referrerAddress;
-        userAddressUser.save();
 
         //进行转账处理
         //如果推荐人地址就是创始人地址，则直接进行转账
@@ -475,7 +474,6 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
           比如在这里，一级推荐人的子级中增加了用户地址，则同时二级推荐人的第二级子级也是加入了用户地址的
         */
         refUser.x6Matrix[i32(level)].secondLevelReferrals.push(userAddress);
-        refUser.save();
 
         //获得二级推荐人的第一层级的已有点位数量
         let len = refUser.x6Matrix[i32(level)].firstLevelReferrals.length;
@@ -518,7 +516,9 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
             }
         }
 
+        log('17');
         updateX6ReferrerSecondLevel(userAddress, ref, level);
+        log('18');
         return;
     }
 
@@ -568,6 +568,8 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
 function updateX6ReferrerSecondLevel(userAddress : Address ,referrerAddress : Address , level : i64 ) : void {
 
     let referrerAddressUser = userDB.getUser(referrerAddress);
+    assert(userDB.hasUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer), 'user ' + referrerAddressUser.id.toString() + ' has no current referrer');
+
     let referrerAddressRefUser = userDB.getUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer);
     let owner = Globals.get<Address>('owner');
 
@@ -598,8 +600,9 @@ function updateX6ReferrerSecondLevel(userAddress : Address ,referrerAddress : Ad
 
     referrerAddressUser.x6Matrix[i32(level)].reinvestCount++;
 
-    userDB.setUser(referrerAddress, referrerAddressUser);
-    userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer, referrerAddressRefUser);
+    log('16');
+    // userDB.setUser(referrerAddress, referrerAddressUser);
+    // userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer, referrerAddressRefUser);
 
     if (referrerAddress != owner) {
         let freeReferrerAddress = findFreeX6Referrer(referrerAddress, level);
@@ -643,9 +646,9 @@ function updateX6(userAddress : Address , referrerAddress : Address , level : i6
         //set current level
         userAddressUser.x6Matrix[i32(level)].currentReferrer = referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[1];
     }
-    userDB.setUser(userAddress, userAddressUser);
-    userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[0], referrerAddressRefUser);
-    userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[1], referrerAddressRefUserO);
+    // userDB.setUser(userAddress, userAddressUser);
+    // userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[0], referrerAddressRefUser);
+    // userDB.setUser(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[1], referrerAddressRefUserO);
 }
 
 // 所有合约的主文件必须声明此函数

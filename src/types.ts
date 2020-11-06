@@ -4,27 +4,48 @@ import {Store} from "../node_modules/keystore_wdc/lib";
 
 export const MAX_LEVEL = 12;
 
+// 将内存-数据库状态管理统一到 UserDB 中, 每次执行完方法后调用 persist 持久化状态
+// 以此保证不同函数对 User 的修改互相可见
 export class UserDB {
     static USER_DB: Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
+    cache: Map<String, User>
+    constructor() {
+        this.cache = new Map<String, User>();
+    }
 
     hasUser(addr: Address): bool {
-        return UserDB.USER_DB.has(addr);
+        return this.cache.has(addr.toString()) || UserDB.USER_DB.has(addr);
     }
+
     getUser(addr: Address): User {
-        return User.fromEncoded(UserDB.USER_DB.get(addr));
+        assert(this.hasUser(addr), 'user ' + addr.toString() + ' not found');
+        if(this.cache.has(addr.toString()))
+            return this.cache.get(addr.toString());
+
+        const ret = User.fromEncoded(UserDB.USER_DB.get(addr));
+        this.cache.set(addr.toString(), ret);
+        return ret
     }
 
     setUser(addr: Address, u: User): void {
+        this.cache.set(addr.toString(), u);
         UserDB.USER_DB.set(addr, u.getEncoded());
     }
 
     removeUser(addr: Address): void {
+        this.cache.delete(addr.toString());
         UserDB.USER_DB.remove(addr);
+    }
+
+    persist(): void{
+        const keys = this.cache.keys();
+        for(let i = 0; i < keys.length; i++){
+            this.cache.get(keys[i]).save();
+        }
     }
 }
 
 export const userDB = new UserDB();
-
 
 function getNull(): ArrayBuffer {
     const ret = new Uint8Array(1);
