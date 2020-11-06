@@ -1,7 +1,30 @@
 import { Address, log, RLP, RLPList } from "../node_modules/keystore_wdc/lib";
-import { idToAddress, userDB } from './firebee'
+import { idToAddress } from './firebee'
+import {Store} from "../node_modules/keystore_wdc/lib";
 
 export const MAX_LEVEL = 12;
+
+export class UserDB {
+    static USER_DB: Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
+
+    hasUser(addr: Address): bool {
+        return UserDB.USER_DB.has(addr);
+    }
+    getUser(addr: Address): User {
+        return User.fromEncoded(UserDB.USER_DB.get(addr));
+    }
+
+    setUser(addr: Address, u: User): void {
+        UserDB.USER_DB.set(addr, u.getEncoded());
+    }
+
+    removeUser(addr: Address): void {
+        UserDB.USER_DB.remove(addr);
+    }
+}
+
+export const userDB = new UserDB();
+
 
 function getNull(): ArrayBuffer {
     const ret = new Uint8Array(1);

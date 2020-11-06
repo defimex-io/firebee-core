@@ -48,7 +48,7 @@ class Command{
         c.abi = this.abi()
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
         const ownerAddr = sk2Addr(sk)
-        const tx = builder.buildDeploy(c, [ownerAddr, 'WX1111111111111111111115vGLbG'])
+        const tx = builder.buildDeploy(c, [ownerAddr])
         return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
     }
 

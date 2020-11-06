@@ -1,5 +1,5 @@
 import {Address, DB, log, Store} from "../node_modules/keystore_wdc/lib";
-import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6} from "./types";
+import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6, userDB} from "./types";
 import { ___idof, ABI_DATA_TYPE, Context, Globals, U256 } from "../node_modules/keystore_wdc/lib/index";
 
 class FndWdcReceiverResult {
@@ -11,24 +11,6 @@ class FndWdcReceiverResult {
     }
 }
 
-export class UserDB {
-    static USER_DB: Store<Address, ArrayBuffer> = Store.from<Address, ArrayBuffer>('user');
-
-    hasUser(addr: Address): bool {
-        return UserDB.USER_DB.has(addr);
-    }
-    getUser(addr: Address): User {
-        return User.fromEncoded(UserDB.USER_DB.get(addr));
-    }
-
-    setUser(addr: Address, u: User): void {
-        UserDB.USER_DB.set(addr, u.getEncoded());
-    }
-
-    removeUser(addr: Address): void {
-        UserDB.USER_DB.remove(addr);
-    }
-}
 
 export const idToAddress = Store.from<u64, Address>('idToAddress');
 const userIds = Store.from<Address, u64>('userIds');
@@ -39,7 +21,6 @@ const blackPrice = Store.from<u64, U256>('blackPrice');
 const WDC = U256.fromU64(100000000);
 // @ts-ignore
 const firstPrice: U256 = U256.fromU64(200) * WDC;
-export const userDB = new UserDB();
 
 export function init(ownerAddress: Address): Address {
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
