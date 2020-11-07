@@ -101,11 +101,17 @@ export function getUserFromAddress(addr: Address): ArrayBuffer {
 
 // 根据地址查看id
 export function getUserIdFromAddress(addr: Address): u64 {
+    // 如果地址不存在，返回 0，防止合约执行抛出异常
+    if(!userIds.has(addr))
+        return 0;
     return userIds.get(addr);
 }
 
 // 根据id查看地址
 export function getAddressFromUserId(id: u64): Address {
+    // 如果 id 不存在，返回 0 地址，防止合约执行抛出异常
+    if(!idToAddress.has(id))
+        return ZERO_ADDRESS;
     return idToAddress.get(id);
 }
 
