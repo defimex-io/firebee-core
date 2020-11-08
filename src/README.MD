@@ -239,3 +239,10 @@ METHOD=register USER=2 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
 METHOD=register USER=3 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
 METHOD=register USER=3 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
 ```
+
+### 多用户同时注册
+
+```shell script
+METHOD=deploy USER=1 node -r ts-node/register test/firebee-test.ts
+METHOD=race node -r ts-node/register test/firebee-test.ts
+```
