@@ -49,6 +49,9 @@ class Command{
         const ownerAddr = sk2Addr(sk)
         const tx = builder.buildDeploy(c, [ownerAddr])
         const ret = await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+        if(!fs.existsSync(path.join(__dirname, "../local"))){
+            fs.mkdirSync(path.join(__dirname, "../local"))
+        }
         fs.writeFileSync(path.join(__dirname, '../local/contractAddress.js'), `module.exports = '${ret.result}'`)
         return ret
     }
