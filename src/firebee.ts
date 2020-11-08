@@ -134,10 +134,11 @@ export function getBlackPriceFromLevel(level: u64): U256 {
 //参数为：推荐人地址
 //注意，这个方法是一个可以外部调用的方法，同时允许转账wdc,因此带有payable修饰符
 //内部调用了真正处理新用户注册的registration方法
-export function registrationExt(referrerAddress: Address): void {
+export function registrationExt(referrerAddress: Address): u64 {
     const msg = Context.msg();
-    registration(msg.sender, referrerAddress, msg.amount);
+    let ret = registration(msg.sender, referrerAddress, msg.amount);
     userDB.persist();
+    return ret;
 }
 
 //购买级别
@@ -189,7 +190,7 @@ export function buyNewLevel(matrix: u64, level: i64): void {
 //新用户注册方法
 //参数为：新用户地址、推荐人地址
 //注意，所谓的新用户注册，就是给某个已经加入到矩阵的地址（推荐人地址）投资，同时要符合级别的要求，新用户只能从第一级开始
-function registration(userAddress: Address, referrerAddress: Address, amount: U256): void {
+function registration(userAddress: Address, referrerAddress: Address, amount: U256): u64 {
 
     /*这里是一些前置条件的校验，条件分别为：
       1、转账的wdc必须是200个，为什么呢？因为必须同时激活X3与X6的第一个级别，分别是100，加起来就得是200,
@@ -261,6 +262,8 @@ function registration(userAddress: Address, referrerAddress: Address, amount: U2
         U256.fromU64(userIds.get(userAddress)),
         U256.fromU64(userIds.get(referrerAddress)))
     );
+
+    return user.id;
 }
 
 //检查用户推荐人X3模块下某个矩阵是否激活

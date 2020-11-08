@@ -4,7 +4,6 @@ import {ABI, Contract, TransactionResult, Readable} from "keystore_wdc/contract"
 const path = require('path')
 const entry = path.join(__dirname, '../src/firebee.ts')
 const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
-const contractAddress = process.env['CONTRACT_ADDRESS']
 import rlp = require('./rlp')
 import {User} from "./types";
 
@@ -49,7 +48,9 @@ class Command{
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
         const ownerAddr = sk2Addr(sk)
         const tx = builder.buildDeploy(c, [ownerAddr])
-        return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+        const ret = await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+        fs.writeFileSync(path.join(__dirname, '../local/contractAddress.js'), `module.exports = '${ret.result}'`)
+        return ret
     }
 
     // get nonce by private key
@@ -72,8 +73,15 @@ class Command{
     }
 
     contract(): Contract{
-        return new Contract(contractAddress, this.abi())
+        return new Contract(this.contractAddress(), this.abi())
     }
+
+    contractAddress(): string{
+        if (process.env['CONTRACT_ADDRESS'])
+            return process.env['CONTRACT_ADDRESS']
+        return require('../local/contractAddress.js')
+    }
+
 
     async getUser(idx: number): Promise<User>{
         const c = this.contract()
@@ -126,6 +134,18 @@ async function main(){
             console.log('编译文件长度')
             console.log((await cmd.compile()).length)
             break
+        case 'race':{
+            const ps: Promise<any>[] = []
+           for(let i = 2; i < (2 + 5); i++){
+               const p = cmd.register(i, 1)
+                   .then(r => {
+                       console.log(i, r.result)
+                   })
+               ps.push(p)
+           }
+           await Promise.all(ps)
+           break
+        }
     }
 }
 
