@@ -246,3 +246,29 @@ METHOD=register USER=3 REFERRER= 1 node -r ts-node/register test/firebee-test.ts
 METHOD=deploy USER=1 node -r ts-node/register test/firebee-test.ts
 METHOD=race node -r ts-node/register test/firebee-test.ts
 ```
+
+### 升级
+
+```shell script
+METHOD=buy;USER=2;LEVEL=2 node -r ts-node/register test/firebee-test.ts
+```
+
+返回结果
+
+```js
+module.exports = {
+  blockHeight: 4,
+  blockHash: '873c40725f774269a2e4ab79e3a6e8a903f5f56d048f35f9a9a16c6c0fae38c2',
+  gasUsed: 4288,
+  events: [
+    { name: 'NewUserPlace', data: [Object] },
+    { name: 'SentExtraWdcDividends', data: [Object] },
+    { name: 'Upgrade', data: [Object] }
+  ],
+  transactionHash: '271d39f44988f1fb617625fe36b2726e138a976a183bb861bb5255a916a527ef',
+  fee: 857600000,
+  method: 'buyNewLevel',
+  inputs: { matrix: 1, level: 2 }
+}
+
+```

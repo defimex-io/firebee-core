@@ -57,7 +57,7 @@ class Command{
     private static _abi: ABI[]
 
     // 部署
-    async deploy(idx: number): Promise<TransactionResult>{
+    async deploy(idx: number): Promise<any>{
         const sk = privateKeys[idx]
         const buf = await this.compile()
         const c = new tool.Contract('', this.abi(), buf)
@@ -65,7 +65,7 @@ class Command{
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
         const ownerAddr = sk2Addr(sk)
         const tx = builder.buildDeploy(c, [ownerAddr])
-        const ret = await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+        const ret = <any> await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
         if(!fs.existsSync(path.join(__dirname, "../local"))){
             fs.mkdirSync(path.join(__dirname, "../local"))
         }
@@ -73,7 +73,7 @@ class Command{
         return ret
     }
 
-    async buy(idx: number, level: number): Promise<TransactionResult>{
+    async buy(idx: number, level: number): Promise<any>{
         const sk = privateKeys[idx]
         const c = this.contract()
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
@@ -127,7 +127,7 @@ class Command{
         return rpc.viewContract(this.contract(), 'getOwner', [])
     }
 
-    async register(u: number, referrer: number): Promise<TransactionResult>{
+    async register(u: number, referrer: number): Promise<any>{
         const c = this.contract()
         const sk = privateKeys[u]
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
@@ -181,6 +181,7 @@ async function main(){
         case 'buy':{
             await cmd.buy(parseInt(u), parseInt(process.env['LEVEL']))
                 .then(console.log)
+            break
         }
     }
 }
