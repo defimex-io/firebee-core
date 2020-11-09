@@ -6,7 +6,8 @@ const entry = path.join(__dirname, '../src/firebee.ts')
 const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
 import rlp = require('./rlp')
 import {User} from "./types";
-
+import BN = require("keystore_wdc/bn");
+const MAX_LEVEL = 12
 const privateKeys = [
     null, // starts with 1
     '56df79d38cb8146a4a4bde7460715574db087cf867d54768a4bed1d2f0a4baa7',
@@ -37,6 +38,22 @@ function sk2Addr(sk: string): string{
 }
 
 class Command{
+    levelPrice: BN[]
+    // @ts-ignore
+    blackPrice: BN[]
+    firstPrice = new BN(100000000).mul(new BN(200))
+    constructor() {
+        this.levelPrice = [null, this.firstPrice.mul(new BN(95)).div(new BN(200))]
+        this.blackPrice = [null, this.firstPrice.mul(new BN(5)).div(new BN(200))]
+
+        for (let i = 2; i <= MAX_LEVEL; i++) {
+            let nextLeverPrice = this.levelPrice[i - 1].mul(new BN(2))
+            let nextBlackPrice = this.blackPrice[i - 1].mul(new BN(2))
+            this.levelPrice[i] = nextLeverPrice
+            this.blackPrice[i] = nextBlackPrice
+        }
+    }
+
     private static _abi: ABI[]
 
     // 部署
@@ -54,6 +71,18 @@ class Command{
         }
         fs.writeFileSync(path.join(__dirname, '../local/contractAddress.js'), `module.exports = '${ret.result}'`)
         return ret
+    }
+
+    async buy(idx: number, level: number): Promise<TransactionResult>{
+        const sk = privateKeys[idx]
+        const c = this.contract()
+        const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
+        const tx = builder.buildContractCall(c, 'buyNewLevel', [1, level], this.price(level))
+        return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+    }
+
+    price(level: number): BN{
+        return this.levelPrice[level].add(this.blackPrice[level])
     }
 
     // get nonce by private key
@@ -148,6 +177,10 @@ async function main(){
            }
            await Promise.all(ps)
            break
+        }
+        case 'buy':{
+            await cmd.buy(parseInt(u), parseInt(process.env['LEVEL']))
+                .then(console.log)
         }
     }
 }
