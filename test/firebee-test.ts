@@ -1,11 +1,11 @@
 import tool = require('keystore_wdc/contract')
 import fs = require('fs')
-import {ABI, Contract, TransactionResult, Readable} from "keystore_wdc/contract";
+import { ABI, Contract, Readable } from "keystore_wdc/contract";
 const path = require('path')
 const entry = path.join(__dirname, '../src/firebee.ts')
 const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
 import rlp = require('./rlp')
-import {User} from "./types";
+import { User } from "./types";
 import BN = require("keystore_wdc/bn");
 const MAX_LEVEL = 12
 const privateKeys = [
@@ -33,11 +33,11 @@ const privateKeys = [
 ]
 
 // convert private key to address
-function sk2Addr(sk: string): string{
+function sk2Addr(sk: string): string {
     return tool.publicKeyHash2Address(tool.publicKey2Hash(tool.privateKey2PublicKey(sk)))
 }
 
-class Command{
+class Command {
     levelPrice: BN[]
     // @ts-ignore
     blackPrice: BN[]
@@ -57,7 +57,7 @@ class Command{
     private static _abi: ABI[]
 
     // 部署
-    async deploy(idx: number): Promise<any>{
+    async deploy(idx: number): Promise<any> {
         const sk = privateKeys[idx]
         const buf = await this.compile()
         const c = new tool.Contract('', this.abi(), buf)
@@ -65,15 +65,15 @@ class Command{
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
         const ownerAddr = sk2Addr(sk)
         const tx = builder.buildDeploy(c, [ownerAddr])
-        const ret = <any> await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
-        if(!fs.existsSync(path.join(__dirname, "../local"))){
+        const ret = <any>await rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+        if (!fs.existsSync(path.join(__dirname, "../local"))) {
             fs.mkdirSync(path.join(__dirname, "../local"))
         }
         fs.writeFileSync(path.join(__dirname, '../local/contractAddress.js'), `module.exports = '${ret.result}'`)
         return ret
     }
 
-    async buy(idx: number, level: number): Promise<any>{
+    async buy(idx: number, level: number): Promise<any> {
         const sk = privateKeys[idx]
         const c = this.contract()
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
@@ -81,53 +81,53 @@ class Command{
         return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
     }
 
-    price(level: number): BN{
+    price(level: number): BN {
         return this.levelPrice[level].add(this.blackPrice[level])
     }
 
     // get nonce by private key
-    async getNonceBySK(sk: string): Promise<number>{
+    async getNonceBySK(sk: string): Promise<number> {
         const n = await rpc.getNonce(sk2Addr(sk))
         return typeof n === 'number' ? n : parseInt(n)
     }
 
-    compile(): Promise<Uint8Array>{
+    compile(): Promise<Uint8Array> {
         const ascPath = process.env['ASC_PATH'] || path.join(__dirname, '../node_modules/.bin/asc')
         return tool.compileContract(entry, null)
     }
 
     abi(): ABI[] {
-        if(Command._abi)
+        if (Command._abi)
             return Command._abi
         const f = fs.readFileSync(entry)
         Command._abi = tool.compileABI(f)
         return Command._abi
     }
 
-    contract(): Contract{
+    contract(): Contract {
         return new Contract(this.contractAddress(), this.abi())
     }
 
-    contractAddress(): string{
+    contractAddress(): string {
         if (process.env['CONTRACT_ADDRESS'])
             return process.env['CONTRACT_ADDRESS']
         return require('../local/contractAddress.js')
     }
 
 
-    async getUser(idx: number): Promise<User>{
+    async getUser(idx: number): Promise<User> {
         const c = this.contract()
         const sk = privateKeys[idx]
         const addr = sk2Addr(sk)
         const r = await rpc.viewContract(c, 'getUserFromAddress', [addr])
-        return User.fromEncoded(rlp.decodeHex(<string> r))
+        return User.fromEncoded(rlp.decodeHex(<string>r))
     }
 
-    async getOwner(): Promise<Readable>{
+    async getOwner(): Promise<Readable> {
         return rpc.viewContract(this.contract(), 'getOwner', [])
     }
 
-    async register(u: number, referrer: number): Promise<any>{
+    async register(u: number, referrer: number): Promise<any> {
         const c = this.contract()
         const sk = privateKeys[u]
         const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
@@ -137,16 +137,16 @@ class Command{
     }
 }
 
-async function main(){
+async function main() {
     const m = process.env['METHOD']
     const u = process.env['USER']
     const r = process.env['REFERRER']
     const cmd = new Command()
 
-    if(!m)
+    if (!m)
         return
 
-    switch (m){
+    switch (m) {
         case 'deploy':
             console.log(await cmd.deploy(parseInt(u)))
             break
@@ -166,19 +166,19 @@ async function main(){
             console.log('编译文件长度')
             console.log((await cmd.compile()).length)
             break
-        case 'race':{
+        case 'race': {
             const ps: Promise<any>[] = []
-           for(let i = 2; i < (2 + 5); i++){
-               const p = cmd.register(i, 1)
-                   .then(r => {
-                       console.log(i, r.result)
-                   })
-               ps.push(p)
-           }
-           await Promise.all(ps)
-           break
+            for (let i = 2; i < (2 + 5); i++) {
+                const p = cmd.register(i, 1)
+                    .then(r => {
+                        console.log(i, r.result)
+                    })
+                ps.push(p)
+            }
+            await Promise.all(ps)
+            break
         }
-        case 'buy':{
+        case 'buy': {
             await cmd.buy(parseInt(u), parseInt(process.env['LEVEL']))
                 .then(console.log)
             break
