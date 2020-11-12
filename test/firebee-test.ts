@@ -114,6 +114,15 @@ class Command {
         return require('../local/contractAddress.js')
     }
 
+    async addr2id(): Promise<Map<string, number>>{
+        const ret = new Map<string, number>()
+        const c = this.contract()
+        for(let i = 1; i < privateKeys.length; i++){
+            const r = <number> await rpc.viewContract(c, 'getUserIdFromAddress', sk2Addr(privateKeys[i]))
+            ret.set(sk2Addr(privateKeys[i]), r)
+        }
+        return ret
+    }
 
     async getUser(idx: number): Promise<User> {
         const c = this.contract()
@@ -127,6 +136,15 @@ class Command {
         return rpc.viewContract(this.contract(), 'getOwner', [])
     }
 
+    replaceAddr2Id(u: User, m: Map<string, number>): void{
+        u.referrer = (m.get(u.referrer) || 0).toString()
+        u.x6Matrix.forEach(el => {
+            el.currentReferrer = (m.get(el.currentReferrer) || 0).toString()
+            el.firstLevelReferrals = el.firstLevelReferrals.map(ell => (m.get(ell) || 0).toString())
+            el.secondLevelReferrals = el.secondLevelReferrals.map(ell => (m.get(ell) || 0).toString())
+            el.closedPart = (m.get(el.closedPart) || 0).toString()
+        })
+    }
     async register(u: number, referrer: number): Promise<any> {
         const c = this.contract()
         const sk = privateKeys[u]
@@ -136,9 +154,9 @@ class Command {
         return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
     }
 
-    async view(): Promise<User[]> {
+    async view(maxID: number): Promise<User[]> {
         const ret = []
-        for(let i = 1; i < privateKeys.length; i++){
+        for(let i = 1; i <= maxID; i++){
             ret.push(await this.getUser(i))
         }
         return ret
@@ -192,8 +210,18 @@ async function main() {
             break
         }
         case 'view':{
-            const all = await cmd.view()
-            fs.writeFileSync('all.json', JSON.stringify(all))
+            const m = await cmd.addr2id()
+            const all = await cmd.view(parseInt(u))
+            all.forEach(o => {
+                // 观察第一级的 x6 矩阵
+                delete o.activeX6Levels
+                delete o.activeX3Levels
+                delete o.x3Matrix
+                o.x6Matrix = o.x6Matrix.slice(1, 2)
+            })
+            // 把地址替换成 id 便于观察
+            all.forEach(u => cmd.replaceAddr2Id(u, m))
+            fs.writeFileSync(path.join(__dirname, '../local/all.json'), JSON.stringify(all, null, 2))
             break
         }
     }
