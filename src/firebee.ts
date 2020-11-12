@@ -1,10 +1,10 @@
-import {Address, DB, log, Store} from "../node_modules/keystore_wdc/lib";
-import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6, userDB} from "./types";
+import { Address, DB, log, Store } from "../node_modules/keystore_wdc/lib";
+import { User, MAX_LEVEL, ZERO_ADDRESS, X3, X6, userDB } from "./types";
 import { ___idof, ABI_DATA_TYPE, Context, Globals, U256 } from "../node_modules/keystore_wdc/lib/index";
 
 class FndWdcReceiverResult {
-    receiver : Address;
-    isExtraDividends : boolean;
+    receiver: Address;
+    isExtraDividends: boolean;
     constructor() {
         this.receiver = ZERO_ADDRESS;
         this.isExtraDividends = false;
@@ -23,18 +23,14 @@ const WDC = U256.fromU64(100000000);
 const firstPrice: U256 = U256.fromU64(200) * WDC;
 
 export function init(ownerAddress: Address): Address {
-    // 因为 solidty 的 map 会有默认的 key-value pair, 所以需要一个 0 地址用户，和 solidity 的 map 兼容
-    userDB.setUser(ZERO_ADDRESS, new User(0, ZERO_ADDRESS, 0));
-    idToAddress.set(0, ZERO_ADDRESS);
-
     //当前最新的可用ID，由于合约部署时，创始人会使用1作为ID，因此从2开始作为当前最新可用ID
     Globals.set<u64>('lastUserId', 2);
     // ownerAddress
     //第一个等级是价格设定
     // @ts-ignore
-    levelPrice.set(1, firstPrice * U256.fromU64(95)/ U256.fromU64(200));
+    levelPrice.set(1, firstPrice * U256.fromU64(95) / U256.fromU64(200));
     // @ts-ignore
-    blackPrice.set(1, firstPrice * U256.fromU64(5)/ U256.fromU64(200));
+    blackPrice.set(1, firstPrice * U256.fromU64(5) / U256.fromU64(200));
     //每个等级的激活价格都是前一个等级的两倍
     for (let i = 2; i <= MAX_LEVEL; i++) {
         // @ts-ignore
@@ -94,7 +90,7 @@ export function getMaxLevel(): U256 {
     return U256.fromU64(MAX_LEVEL);
 }
 
-// 根据地址查看用户
+// 根据地址查看用户，零地址说明不存在
 export function getUserFromAddress(addr: Address): ArrayBuffer {
     return userDB.getUser(addr).getEncoded();
 }
@@ -102,17 +98,13 @@ export function getUserFromAddress(addr: Address): ArrayBuffer {
 // 根据地址查看id
 export function getUserIdFromAddress(addr: Address): u64 {
     // 如果地址不存在，返回 0，防止合约执行抛出异常
-    if(!userIds.has(addr))
-        return 0;
-    return userIds.get(addr);
+    return userIds.getOrDefault(addr, 0);
 }
 
 // 根据id查看地址
 export function getAddressFromUserId(id: u64): Address {
     // 如果 id 不存在，返回 0 地址，防止合约执行抛出异常
-    if(!idToAddress.has(id))
-        return ZERO_ADDRESS;
-    return idToAddress.get(id);
+    return idToAddress.getOrDefault(id, ZERO_ADDRESS);
 }
 
 // 获取最新UserId
@@ -171,8 +163,8 @@ export function buyNewLevel(matrix: u64, level: i64): void {
     } else {
         assert(!sendUser.activeX6Levels[l], "level already activated");
 
-        if (sendUser.x6Matrix[l-1].blocked) {
-            sendUser.x6Matrix[l-1].blocked = false;
+        if (sendUser.x6Matrix[l - 1].blocked) {
+            sendUser.x6Matrix[l - 1].blocked = false;
         }
 
         let freeX6Referrer = findFreeX6Referrer(msg.sender, l);
@@ -387,7 +379,7 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
     //将参数中的接收地址赋值给receiver变量
     let receiver = userAddress;
     //
-    let isExtraDividends : boolean  = true;
+    let isExtraDividends: boolean = true;
 
     let result = new FndWdcReceiverResult();
 
@@ -440,7 +432,7 @@ function findWdcReceiver(userAddress: Address, _from: Address, matrix: u64, leve
       注意，实际调用这个方法时，参数中的referrerAddress是向上遍历时确定的实际有效推荐人
       这也是一个私有方法，表明不能在合约外部直接调用
     */
-function updateX6Referrer(userAddress : Address ,referrerAddress : Address , level : i64): void {
+function updateX6Referrer(userAddress: Address, referrerAddress: Address, level: i64): void {
 
     //有效推荐人地址的对应X6级别需要是激活状态
     let referrerAddressUser = userDB.getUser(referrerAddress);
@@ -505,7 +497,7 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
                 //
                 Context.emit<NewUserPlace>(new NewUserPlace(userAddress, ref, U256.fromU64(2), U256.fromU64(level), U256.fromU64(6)));
             }
-        }  else if ((len == 1 || len == 2) &&
+        } else if ((len == 1 || len == 2) &&
             refUser.x6Matrix[i32(level)].firstLevelReferrals[0] == referrerAddress) {
             //如果二级推荐人的第一层级已满或者只占据了一个位置，并且第一层级的第一位是推荐人地址
 
@@ -574,11 +566,9 @@ function updateX6Referrer(userAddress : Address ,referrerAddress : Address , lev
     updateX6ReferrerSecondLevel(userAddress, referrerAddress, level);
 }
 
-function updateX6ReferrerSecondLevel(userAddress : Address ,referrerAddress : Address , level : i64 ) : void {
+function updateX6ReferrerSecondLevel(userAddress: Address, referrerAddress: Address, level: i64): void {
 
     let referrerAddressUser = userDB.getUser(referrerAddress);
-    assert(userDB.hasUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer), 'user ' + referrerAddressUser.id.toString() + ' has no current referrer');
-
     let referrerAddressRefUser = userDB.getUser(referrerAddressUser.x6Matrix[i32(level)].currentReferrer);
     let owner = Globals.get<Address>('owner');
 
@@ -627,7 +617,7 @@ function updateX6ReferrerSecondLevel(userAddress : Address ,referrerAddress : Ad
 //检查用户推荐人X6模块下某个矩阵是否激活
 //参数为：传入用户地址、X3矩阵级别序列号，并获取实际推荐人地址
 //处理逻辑与上述的X3类似
-function findFreeX6Referrer(userAddress : Address , level : i64 ) : Address {
+function findFreeX6Referrer(userAddress: Address, level: i64): Address {
     while (true) {
         if (userDB.getUser(userDB.getUser(userAddress).referrer).activeX6Levels[i32(level)]) {
             return userDB.getUser(userAddress).referrer;
@@ -637,7 +627,7 @@ function findFreeX6Referrer(userAddress : Address , level : i64 ) : Address {
     }
 }
 
-function updateX6(userAddress : Address , referrerAddress : Address , level : i64 , x2 : bool) : void {
+function updateX6(userAddress: Address, referrerAddress: Address, level: i64, x2: bool): void {
     let userAddressUser = userDB.getUser(userAddress);
     let referrerAddressUser = userDB.getUser(referrerAddress);
     let referrerAddressRefUser = userDB.getUser(referrerAddressUser.x6Matrix[i32(level)].firstLevelReferrals[0]);

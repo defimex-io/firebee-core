@@ -1,6 +1,6 @@
-import tool = require('keystore_wdc/contract')
+import tool = require('keystore_wdc/contract-dist')
 import fs = require('fs')
-import { ABI, Contract, Readable } from "keystore_wdc/contract";
+import { ABI, Contract, Readable } from "keystore_wdc/contract-dist";
 const path = require('path')
 const entry = path.join(__dirname, '../src/firebee.ts')
 const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
@@ -135,6 +135,14 @@ class Command {
         const tx = builder.buildContractCall(c, 'registrationExt', [r], '20000000000')
         return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
     }
+
+    async view(): Promise<User[]> {
+        const ret = []
+        for(let i = 1; i < privateKeys.length; i++){
+            ret.push(await this.getUser(i))
+        }
+        return ret
+    }
 }
 
 async function main() {
@@ -168,10 +176,10 @@ async function main() {
             break
         case 'race': {
             const ps: Promise<any>[] = []
-            for (let i = 2; i < (2 + 5); i++) {
+            for (let i = 2; i < privateKeys.length; i++) {
                 const p = cmd.register(i, 1)
                     .then(r => {
-                        console.log(i, r.result)
+                        console.log(r)
                     })
                 ps.push(p)
             }
@@ -181,6 +189,11 @@ async function main() {
         case 'buy': {
             await cmd.buy(parseInt(u), parseInt(process.env['LEVEL']))
                 .then(console.log)
+            break
+        }
+        case 'view':{
+            const all = await cmd.view()
+            fs.writeFileSync('all.json', JSON.stringify(all))
             break
         }
     }

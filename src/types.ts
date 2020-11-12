@@ -14,17 +14,18 @@ export class UserDB {
     }
 
     hasUser(addr: Address): bool {
-        return this.cache.has(addr.toString()) || UserDB.USER_DB.has(addr);
+        return this.getUser(addr).id != 0;
     }
 
     getUser(addr: Address): User {
-        assert(this.hasUser(addr), 'user ' + addr.toString() + ' not found');
         if(this.cache.has(addr.toString()))
             return this.cache.get(addr.toString());
-
-        const ret = User.fromEncoded(UserDB.USER_DB.get(addr));
-        this.cache.set(addr.toString(), ret);
-        return ret
+        if(UserDB.USER_DB.has(addr)){
+            const ret = User.fromEncoded(UserDB.USER_DB.get(addr));
+            this.cache.set(addr.toString(), ret);
+            return ret;
+        }
+        return new User(0, ZERO_ADDRESS, 0);
     }
 
     setUser(addr: Address, u: User): void {
@@ -40,7 +41,9 @@ export class UserDB {
     persist(): void{
         const keys = this.cache.keys();
         for(let i = 0; i < keys.length; i++){
-            this.cache.get(keys[i]).save();
+            const u = this.cache.get(keys[i]);
+            if(u.id != 0)
+                u.save();
         }
     }
 }
