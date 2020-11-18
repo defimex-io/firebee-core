@@ -308,7 +308,7 @@ function updateX3Referrer(userAddress: Address, referrerAddress: Address, level:
     referrerAddressUser.x3Matrix[i32(level)].referrals = [];
 
     //如果推荐人的之后级别的矩阵未激活并且当前矩阵不是最后一个矩阵，那么该推荐人此矩阵之后的收益取消
-    if (!referrerAddressUser.activeX3Levels[i32(level + 1)] && level != MAX_LEVEL) {
+    if (level != MAX_LEVEL && !referrerAddressUser.activeX3Levels[i32(level + 1)]) {
         /*设置推荐人对应级别的矩阵的阻塞状态为true
           在这里由于用户地址占据了第3个位置，因此导致所处矩阵重置，重置时，对应的referrerAddress地址需要判断是否还能继续接收后续的收益，
           如果referrerAddress具备已经激活的更高一级的矩阵，则仍然可以继续接收滑落的收益，
@@ -593,7 +593,7 @@ function updateX6ReferrerSecondLevel(userAddress: Address, referrerAddress: Addr
     referrerAddressUser.x6Matrix[i32(level)].secondLevelReferrals = [];
     referrerAddressUser.x6Matrix[i32(level)].closedPart = ZERO_ADDRESS;
 
-    if (!referrerAddressUser.activeX6Levels[i32(level + 1)] && level != MAX_LEVEL) {
+    if (level != MAX_LEVEL && !referrerAddressUser.activeX6Levels[i32(level + 1)]) {
         referrerAddressUser.x6Matrix[i32(level)].blocked = true;
     }
 

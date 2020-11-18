@@ -4,6 +4,7 @@ import { ABI, Contract, Readable } from "keystore_wdc/contract-dist";
 const path = require('path')
 const entry = path.join(__dirname, '../src/firebee.ts')
 const rpc = new tool.RPC(process.env['W_HOST'] || 'localhost', process.env['W_PORT'] || 19585)
+
 import rlp = require('./rlp')
 import { User } from "./types";
 import BN = require("keystore_wdc/bn");
@@ -76,9 +77,21 @@ class Command {
     async buy(idx: number, level: number): Promise<any> {
         const sk = privateKeys[idx]
         const c = this.contract()
-        const builder = new tool.TransactionBuilder(1, sk, 0, 200000, (await this.getNonceBySK(sk)) + 1)
+        const builder = new tool.TransactionBuilder(1, sk, 0, 100, (await this.getNonceBySK(sk)) + 1)
         const tx = builder.buildContractCall(c, 'buyNewLevel', [1, level], this.price(level))
         return rpc.sendAndObserve(tx, tool.TX_STATUS.INCLUDED)
+    }
+
+    // 一次性升满 x3
+    async buyX3(idx: number): Promise<any>{
+        const sk = privateKeys[idx]
+        const c = this.contract()
+        const txs = []
+        const builder = new tool.TransactionBuilder(1, sk, 0, 100, (await this.getNonceBySK(sk)) + 1)
+        for(let i = 2; i <= MAX_LEVEL; i++){
+            txs.push(builder.buildContractCall(c, 'buyNewLevel', [1, i], this.price(i)))
+        }
+        return rpc.sendAndObserve(txs, tool.TX_STATUS.INCLUDED)
     }
 
     price(level: number): BN {
@@ -92,8 +105,7 @@ class Command {
     }
 
     compile(): Promise<Uint8Array> {
-        const ascPath = process.env['ASC_PATH'] || path.join(__dirname, '../node_modules/.bin/asc')
-        return tool.compileContract(entry, null)
+        return tool.compileContract(entry, <any> {debug: true})
     }
 
     abi(): ABI[] {
@@ -222,6 +234,20 @@ async function main() {
             // 把地址替换成 id 便于观察
             all.forEach(u => cmd.replaceAddr2Id(u, m))
             fs.writeFileSync(path.join(__dirname, '../local/all.json'), JSON.stringify(all, null, 2))
+            break
+        }
+        case 'timeout':{
+            await rpc.getNonce(sk2Addr(privateKeys[1]))
+            rpc['__nonce'] = 123456788
+            // 这里会阻塞不会打印 1
+            cmd.getUser(parseInt(u)).then(() => console.log(1)).catch(console.error)
+            rpc['__nonce'] = 2
+            // 1 被阻塞 2 不会被阻塞
+            cmd.getUser(parseInt(u)).then(() => console.log(2))
+            break
+        }
+        case 'buyX3':{
+            console.log(await cmd.buyX3(parseInt(u)))
             break
         }
     }
